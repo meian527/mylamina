@@ -1,0 +1,338 @@
+//
+// Created by geguj on 2025/12/28.
+//
+
+#include "generator.hpp"
+#include <bitset>
+#include <iostream>
+#include <unordered_map>
+#include <vector>
+#include <print>
+
+#include "emit.hpp"
+#include "../../include/opcode.hpp"
+
+namespace lmx {
+
+Allocator::Allocator() {
+    bitset.reset();
+    bitset.set(0);
+}
+
+size_t Allocator::alloc() {
+    for (size_t i = 0; i < REG_COUNT; i++) {
+        if (!bitset.test(i)) {
+            bitset.set(i);
+            return i;
+        }
+    }
+    return -1;
+}
+
+size_t Allocator::alloc(size_t i) {
+    bitset.set(i);
+    return i;
+}
+
+void Allocator::free(size_t i) {
+    if (i > 0 && bitset.test(i)) {
+        bitset.reset(i);
+    }
+}
+
+bool Allocator::is_free(size_t i) {
+    return bitset.test(i);
+}
+
+void Generator::write(runtime::Op& op) {
+    ops.push_back(op);
+}
+
+
+std::vector<lmx::runtime::Op> Generator::get_ops() {
+    if (ops.back().op != runtime::Opcode::HALT) {
+        ops.emplace_back(lmx::runtime::Opcode::HALT);
+    }
+    return ops;
+}
+
+size_t Generator::gen(std::shared_ptr<ASTNode> &n) {
+    switch (n->kind) {
+        case Program: return gen_program(n);
+        case Binary: return gen_binary(n);
+        case Unary: return gen_unary(n);
+        case Return: return gen_return(n);
+        case FuncCallExpr: return gen_func_call(n);
+        case VarDecl: return gen_assign(n);
+        case VarRef: return gen_var_ref(n);
+        case NumLiteral: return gen_num(n);
+        case StringLiteral: return gen_string(n);
+        case BoolLiteral: return gen_bool(n);
+        case BlockStmt: return gen_block(n);
+        case IfStmt: return gen_if(n);
+        case FuncDecl: return gen_function(n);
+        default: return 0;
+    }
+}
+
+size_t Generator::gen_program(std::shared_ptr<ASTNode> &n) {
+    const auto node = std::static_pointer_cast<ProgramASTNode>(std::move(n));
+    size_t last_ret = 0;
+    for (auto& c: node->children) {
+        last_ret = gen(c);
+    }
+    return last_ret;
+}
+
+size_t Generator::gen_binary(std::shared_ptr<ASTNode>& n) {
+    const auto node = std::static_pointer_cast<BinaryNode>(std::move(n));
+
+
+    const volatile auto lr = gen(node->left);
+    const volatile auto lr_can = expr_release;
+
+    const volatile auto rr = gen(node->right);
+    const volatile auto rr_can = expr_release;
+    const auto expr_ret_reg = regs.alloc();
+
+    if (node->op == "!=") {
+        LMXOpcodeEmitter::emit_cmp_ne(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "<=") {
+        LMXOpcodeEmitter::emit_cmp_le(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == ">=") {
+        LMXOpcodeEmitter::emit_cmp_ge(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "==") {
+        LMXOpcodeEmitter::emit_cmp_eq(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "<")  {
+        LMXOpcodeEmitter::emit_cmp_lt(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == ">")  {
+        LMXOpcodeEmitter::emit_cmp_gt(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "+")  {
+        LMXOpcodeEmitter::emit_add(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "-")  {
+        LMXOpcodeEmitter::emit_sub(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "*")  {
+        LMXOpcodeEmitter::emit_mul(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "/")  {
+        LMXOpcodeEmitter::emit_div(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "%")  {
+        LMXOpcodeEmitter::emit_mod(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "^")  {
+        LMXOpcodeEmitter::emit_pow(ops, expr_ret_reg, lr, rr);
+    } else {
+        node_has_error = true;
+        error("operator: `" + node->op + "' is not defined.");
+    }
+    if (lr_can) regs.free(lr);
+    if (rr_can) regs.free(rr);
+    expr_release = true;
+    return expr_ret_reg;
+}
+
+size_t Generator::gen_num(std::shared_ptr<ASTNode>& n) {
+    const auto node = std::static_pointer_cast<NumberNode>(std::move(n));
+    const auto expr_ret_reg = regs.alloc();
+    expr_release = true;
+    LMXOpcodeEmitter::emit_mov_ri(ops, expr_ret_reg, std::stoll(node->num));
+    return expr_ret_reg;
+}
+size_t Generator::gen_assign(std::shared_ptr<ASTNode>& n) {
+    const auto node = std::static_pointer_cast<VarDeclNode>(std::move(n));
+    size_t expr_ret_reg;
+    if (const auto v = cur->find(node->name); v.second.second != SIZE_MAX) {
+        //如果可变
+        if (v.first) {
+            expr_ret_reg = gen(node->value);
+            regs.free(v.first->locals[node->name].second);
+            v.first->locals[node->name].second = expr_ret_reg;
+        } else {
+            error("The var `" + node->name + "' is not mutable.");
+        }
+    } else { //如果未定义
+        expr_ret_reg = gen(node->value);
+        regs.alloc(expr_ret_reg);
+        cur->locals[node->name] = std::make_pair(node->is_mut, expr_ret_reg);
+    }
+    expr_release = false;
+    return -1;
+}
+size_t Generator::gen_var_ref(std::shared_ptr<ASTNode>& n) {
+    const auto node = std::static_pointer_cast<VarRefNode>(std::move(n));
+    const auto idx = cur->find(node->name);
+    size_t expr_ret_reg = regs.alloc();
+    if (idx.second.second != SIZE_MAX) {
+        expr_ret_reg = idx.second.second;
+    } else std::cerr << "The var `" + node->name + "` is not found!" << std::endl;
+    expr_release = false;
+    return expr_ret_reg;
+}
+
+size_t Generator::gen_return(std::shared_ptr<ASTNode> &n) {
+    const auto node = std::static_pointer_cast<ReturnStmtNode>(std::move(n));
+    const auto expr_ret_reg = gen(node->expr);
+    LMXOpcodeEmitter::emit_mov_rr(ops, 0, expr_ret_reg);
+    LMXOpcodeEmitter::emit_fret(ops);
+    if (expr_release) regs.free(expr_ret_reg);
+    return expr_ret_reg;
+}
+
+size_t Generator::gen_function(std::shared_ptr<ASTNode> &n) {
+    const auto node = std::static_pointer_cast<FuncDeclNode>(std::move(n));
+
+    return -1;
+}
+
+size_t Generator::gen_func_call(std::shared_ptr<ASTNode> &n) {
+
+}
+
+size_t Generator::gen_unary(std::shared_ptr<ASTNode> &n) {
+    const auto node = std::static_pointer_cast<UnaryNode>(std::move(n));
+    const auto expr_ret_reg = gen(node->operand);
+
+
+    const auto tmp_reg = regs.alloc();
+    LMXOpcodeEmitter::emit_mov_ri(ops, tmp_reg, 0);
+    regs.free(tmp_reg);
+
+    const auto result = regs.alloc();
+
+    if (node->op == "!") {
+        LMXOpcodeEmitter::emit_cmp_eq(ops, result, expr_ret_reg, tmp_reg);
+    } else if (node->op == "-") {
+        LMXOpcodeEmitter::emit_sub(ops, result, tmp_reg, expr_ret_reg);
+    } else {
+        error("unary operator: `" + node->op + "' is not defined.");
+    }
+    if (expr_release) regs.free(expr_ret_reg);
+    expr_release = true;
+    return result;
+}
+
+size_t Generator::gen_string(std::shared_ptr<ASTNode> &n) {
+
+}
+
+size_t Generator::gen_bool(std::shared_ptr<ASTNode> &n) {
+
+}
+
+size_t Generator::gen_block(std::shared_ptr<ASTNode> &n) {
+    const auto node = std::static_pointer_cast<BlockStmtNode>(std::move(n));
+    size_t expr_ret_reg = 0;
+    for (auto& c: node->children) expr_ret_reg = gen(c);
+    return expr_ret_reg;
+}
+
+size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
+
+}
+
+void Generator::print_ops() {
+    for (auto &op: ops) {
+        switch (op.op) {
+            using enum runtime::Opcode;
+        case MOV_RI: {
+            printf("MOVRI: %d, %llu\n", op.operands[0], *reinterpret_cast<int64_t *>(op.operands + 1));
+            break;
+        }
+        case MOV_RM: {
+            printf("MOVRM: %d, %llu\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
+            break;
+        }
+        case MOV_RR: {
+            printf("MOVRR: %u, %u\n", op.operands[0], op.operands[1]);
+            break;
+        }
+        case MOV_RC: {
+            printf("MOVRC: %u, %llu\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
+            break;
+        }
+        case MOV_MI: {
+
+        }
+        case MOV_MM: {
+        }
+        case MOV_MR: {
+        }
+        case MOV_MC: {
+        }
+        case ADD: {
+            printf("ADD: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case SUB: {
+            printf("SUB: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case MUL: {
+            printf("MUL: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case DIV: {
+            printf("DIV: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case MOD: {
+            printf("MOD: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case POW: {
+            printf("POW: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case FCALL: {
+            printf("FCALL: %lld\n", *reinterpret_cast<uint64_t *>(op.operands));
+            break;
+        }
+        case FRET: {
+            printf("FRET\n");
+            break;
+        }
+        case HALT: {
+            printf("HALT\n");
+        }
+        case DEBUG_LOG: {
+            printf("DEBUG_LOG\n");
+        }
+        case JMP: {
+            printf("JMP: %lld\n", *reinterpret_cast<uint64_t *>(op.operands));
+        }
+        case CMP_GE: {
+            printf("CMP_GE: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case CMP_LT: {
+            printf("CMP_LT: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case CMP_LE: {
+            printf("CMP_LE: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case CMP_GT: {
+            printf("CMP_GT: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case CMP_EQ: {
+            printf("CMP_EQ: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case CMP_NE: {
+            printf("CMP_NE: %u, %u, %u\n", op.operands[0], op.operands[1], op.operands[2]);
+            break;
+        }
+        case IF_TRUE: {
+            printf("IF_TRUE: %u\n", op.operands[0]);
+            break;
+        }
+        case IF_FALSE: {
+            printf("IF_FALSE: %u\n", op.operands[0]);
+            break;
+        }
+        }
+    }
+}
+
+
+} // namespace lmx

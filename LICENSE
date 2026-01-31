@@ -1,0 +1,39 @@
+版权与许可声明
+
+本项目为 Lamina 项目的全新重写版本。
+
+本仓库的全部源代码、文档与内容均为重新开发所得，不包含来自旧 Lamina 或 LSR 的直接代码复用。
+
+本项目版权（适用于当前版本）
+
+版权所有 © 2025 Ziyang Bai。保留所有权利。
+
+允许以个人查阅、研究为目的浏览本仓库内容。
+
+除上述允许行为外，任何内容（包括源代码、文档、资源文件与可执行文件）未经 Ziyang Bai 提供的纸质书面授权，不得被复制、修改、分发、转载、再利用或用于任何商业用途。
+
+Ziyang Bai 拥有对本项目进行二次许可的完整权力，并可在任何时间撤销已颁发的授权。授权有效期由 Ziyang Bai 自行指定，撤销通知自发出时立即生效。
+
+任何未经授权的使用行为均构成侵权。版权所有者保留追责与检控权利。
+
+Ziyang Bai 保留在未来版本中将本重写项目转为 LGPL 的权力。
+
+Copyright and License Statement
+
+This project is a complete rewrite of the Lamina project.
+
+All source code, documentation, and content in this repository are newly developed and contain no direct code reuse from the old Lamina or LSR projects.
+
+Copyright for the current version
+
+Copyright © 2025 Ziyang Bai. All rights reserved.
+
+Browsing the contents of this repository for personal review and research is permitted.
+
+Except for the permitted behavior above, no content in this repository (including source code, documentation, resource files, and executables) may be copied, modified, distributed, reposted, reused, or used for any commercial purpose without written authorization in physical form from Ziyang Bai.
+
+Ziyang Bai retains full authority to relicense this project and may revoke any granted authorization at any time. The validity period of each authorization is determined by Ziyang Bai, and any revocation takes effect immediately upon notice.
+
+Any unauthorized use constitutes infringement. The copyright holder reserves the right to pursue responsibility and legal action.
+
+Ziyang Bai reserves the right to relicense this rewritten project under the LGPL in future versions.

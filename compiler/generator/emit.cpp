@@ -8,7 +8,12 @@
 
 namespace lmx {
 
-void LMXOpcodeEmitter::write_imm(uint8_t *dst, int64_t imm) {
+template<class T>
+void LMXOpcodeEmitter::write_imm(uint8_t *dst, T imm) {
+    memcpy(dst, &imm, sizeof(imm));
+}
+
+void LMXOpcodeEmitter::write_imm(uint8_t *dst, uint16_t imm) {
     memcpy(dst, &imm, sizeof(imm));
 }
 
@@ -23,6 +28,15 @@ void LMXOpcodeEmitter::emit_mov_ri(std::vector<lmx::runtime::Op> &ops, uint8_t r
     ops.push_back(op);
 }
 void LMXOpcodeEmitter::emit_mov_rr(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint8_t r2) {
+    if (r1 == r2) return;
+    if (auto& last = ops.back();
+        last.op == runtime::Opcode::MOV_RR || last.op == runtime::Opcode::MOV_RI) {
+        // 如果上一个的结果
+        if (last.operands[0] == r2) {
+            last.operands[0] = r1;
+            return;
+        }
+    }
     lmx::runtime::Op op(lmx::runtime::Opcode::MOV_RR);
     op.operands[0] = r1;
     op.operands[1] = r2;
@@ -58,9 +72,10 @@ void LMXOpcodeEmitter::emit_pow(std::vector<lmx::runtime::Op> &ops, uint8_t r1, 
     write_regs(op.operands, r1, r2, r3);
     ops.push_back(op);
 }
-void LMXOpcodeEmitter::emit_fcall(std::vector<lmx::runtime::Op> &ops, uint64_t idx) {
+void LMXOpcodeEmitter::emit_fcall(std::vector<lmx::runtime::Op> &ops, uint64_t idx, uint8_t ac) {
     lmx::runtime::Op op(lmx::runtime::Opcode::FCALL);
     write_imm(op.operands, std::bit_cast<int64_t>(idx));
+    op.operands[8] = ac;
     ops.push_back(op);
 }
 void LMXOpcodeEmitter::emit_halt(std::vector<lmx::runtime::Op> &ops) {
@@ -68,6 +83,7 @@ void LMXOpcodeEmitter::emit_halt(std::vector<lmx::runtime::Op> &ops) {
     ops.push_back(op);
 }
 void LMXOpcodeEmitter::emit_fret(std::vector<lmx::runtime::Op> &ops) {
+    if (ops.back().op == lmx::runtime::Opcode::FRET) return;
     lmx::runtime::Op op(lmx::runtime::Opcode::FRET);
     ops.push_back(op);
 }
@@ -134,9 +150,8 @@ void LMXOpcodeEmitter::emit_if_false(std::vector<lmx::runtime::Op> &ops, uint8_t
 }
 
 // 新增指令的emit函数实现
-void LMXOpcodeEmitter::emit_func_create(std::vector<lmx::runtime::Op> &ops, uint64_t idx) {
+void LMXOpcodeEmitter::emit_func_create(std::vector<lmx::runtime::Op> &ops) {
     lmx::runtime::Op op(lmx::runtime::Opcode::FUNC_CREATE);
-    write_imm(op.operands, std::bit_cast<int64_t>(idx));
     ops.push_back(op);
 }
 
@@ -145,45 +160,45 @@ void LMXOpcodeEmitter::emit_func_end(std::vector<lmx::runtime::Op> &ops) {
     ops.push_back(op);
 }
 
-void LMXOpcodeEmitter::emit_local_get_int(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
+void LMXOpcodeEmitter::emit_local_get_int(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint16_t idx) {
     lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET_INT);
     op.operands[0] = r;
-    op.operands[1] = idx;
+    write_imm(op.operands + 1, idx);
     ops.push_back(op);
 }
 
-void LMXOpcodeEmitter::emit_local_set_int(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
+void LMXOpcodeEmitter::emit_local_set_int(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r) {
     lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET_INT);
-    op.operands[0] = r;
-    op.operands[1] = idx;
+    write_imm(op.operands, idx);
+    op.operands[2] = r;
     ops.push_back(op);
 }
 
 void LMXOpcodeEmitter::emit_local_get_float(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
     lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET_FLOAT);
     op.operands[0] = r;
-    op.operands[1] = idx;
+    write_imm(op.operands + 1, idx);
     ops.push_back(op);
 }
 
-void LMXOpcodeEmitter::emit_local_set_float(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
+void LMXOpcodeEmitter::emit_local_set_float(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r) {
     lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET_FLOAT);
-    op.operands[0] = r;
-    op.operands[1] = idx;
+    write_imm(op.operands, idx);
+    op.operands[2] = r;
     ops.push_back(op);
 }
 
 void LMXOpcodeEmitter::emit_local_get_bool(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
     lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET_BOOL);
     op.operands[0] = r;
-    op.operands[1] = idx;
+    write_imm(op.operands + 1, idx);
     ops.push_back(op);
 }
 
-void LMXOpcodeEmitter::emit_local_set_bool(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
+void LMXOpcodeEmitter::emit_local_set_bool(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r) {
     lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET_BOOL);
-    op.operands[0] = r;
-    op.operands[1] = idx;
+    write_imm(op.operands, idx);
+    op.operands[2] = r;
     ops.push_back(op);
 }
 } // namespace lmx

@@ -17,6 +17,11 @@ namespace lmx::runtime {
 
         StackFrame() = default;
         explicit StackFrame(std::unique_ptr<StackFrame>&& last) : last(std::move(last)) { locals.reserve(64); }
+
+        void new_var(const uint16_t addr, const Value& value) {
+            if (locals.size() <= addr) locals.resize(addr + 1);
+            locals[addr] = value;
+        }
     };
 }
 

@@ -76,7 +76,7 @@ build_lm() {
         -I./include \
         "${librarys[@]}" \
         "${darwin_framework[@]}" \
-        main.cpp common/repl.cpp common/file_run.cpp \
+        tools/lm/main.cpp tools/lm/common/repl.cpp tools/lm/common/file_run.cpp \
         -llmvm -llmc \
         -o "$build/bin/lm"
 }

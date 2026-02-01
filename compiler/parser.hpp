@@ -24,7 +24,6 @@ class LMC_API Parser {
     std::shared_ptr<ExprNode> term();
 
 
-
     std::shared_ptr<ExprNode> factor();
 
     bool peek_match(TokenType type) const;

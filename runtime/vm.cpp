@@ -7,12 +7,15 @@
 #include <iostream>
 #include <ostream>
 
+#include "../compiler/generator/generator.hpp"
+
 namespace lmx::runtime {
 
 VirtualCore::VirtualCore() : const_pool_top(nullptr), ste() {
     static std::vector<Op> program;
     ste.program = &program;
     ste.pc = 0;
+    ste.cur = std::make_unique<StackFrame>(nullptr);
 }
 
 VirtualCore::VirtualCore(LMXState ste) : const_pool_top(nullptr), ste(std::move(ste)) {}
@@ -104,13 +107,19 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case FCALL: {
-        ste.ret_addr_stack.push_back(ste.pc + 1);
-        ste.pc = *reinterpret_cast<const uint64_t*>(operands);
+        ste.ret_addr_stack.push_back(ste.pc + 1); // 返回地址
+        ste.pc = *reinterpret_cast<const uint64_t*>(operands); // 跳转地址
+        ste.cur = std::make_unique<StackFrame>(std::move(ste.cur)); //新建栈帧
+        const auto args_count = operands[8]; // 传参数量
+        ste.cur->locals.resize(args_count + 1);
+        for (uint8_t i = 0; i != args_count; i++) ste.cur->locals[i] = ste.regs[REG_COUNT_INDEX_MAX - i];
         goto RUN_CONTINUE;
     }
     case FRET: {
-        ste.pc = ste.ret_addr_stack.back();
+        ste.pc = ste.ret_addr_stack.back(); //返回地址
         ste.ret_addr_stack.pop_back();
+        ste.cur = std::move(ste.cur->last); //  恢复栈帧
+        if (!ste.cur) return 0; // 如果上一个为nullptr即到顶，退出全局
         goto RUN_CONTINUE;
     }
     case HALT: {
@@ -166,8 +175,8 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case FUNC_CREATE: {
-        for (; ste.program->operator[](ste.pc).op != FUNC_END; ste.pc++) {}
-        ste.pc += 2;
+        while (ste.program->operator[](ste.pc).op != FUNC_END) {ste.pc++;}
+        ste.pc ++;
         goto RUN_CONTINUE;
     }
     case FUNC_END: {
@@ -180,7 +189,7 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case LOCAL_SET_INT: {
-        ste.cur->locals[*(uint16_t*)(operands)].i64 = ste.regs[operands[2]].i64;
+        ste.cur->new_var(*(uint16_t*)operands, ste.regs[operands[2]]);
         ste.pc++;
         goto RUN_CONTINUE;
     }

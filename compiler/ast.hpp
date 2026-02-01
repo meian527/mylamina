@@ -95,7 +95,7 @@ struct IfStmtNode : public StmtNode {
 struct FuncDeclNode final : public ASTNode {
     std::string name;
     std::vector<std::string> args;
-    std::shared_ptr<BlockStmtNode> body;
+    std::shared_ptr<ASTNode> body;
     
     explicit FuncDeclNode(
         std::string name,
@@ -117,11 +117,11 @@ struct ReturnStmtNode final : public StmtNode {
 
 struct FuncCallExprNode final : public ExprNode {
     std::string name;
-    std::vector<std::shared_ptr<ExprNode>> args;
+    std::vector<std::shared_ptr<ASTNode>> args;
     
     FuncCallExprNode(
         std::string name,
-        std::vector<std::shared_ptr<ExprNode>> args
+        std::vector<std::shared_ptr<ASTNode>> args
     ) : ExprNode(ASTKind::FuncCallExpr), 
         name(std::move(name)), 
         args(std::move(args)) {}

@@ -23,6 +23,7 @@ namespace runtime {
 struct Op;
 }
 #define REG_COUNT 255
+#define REG_COUNT_INDEX_MAX 254
 class LMC_API Allocator {
     std::bitset<REG_COUNT> bitset;
 public:
@@ -37,13 +38,16 @@ class LMC_API Generator {
     /* ===========================
      * expr_release
      * type: bool
-     * 标记上一个gen的返回寄存器是否可以结束后释放
+     * 标记expr_ret_reg是否可以结束后释放
     =========================== */
     bool expr_release{false};
 
 
     size_t gen_program(std::shared_ptr<ASTNode>& n);
     size_t gen_binary(std::shared_ptr<ASTNode>& n);
+
+
+
     size_t gen_function(std::shared_ptr<ASTNode>& n);
     size_t gen_num(std::shared_ptr<ASTNode>& n);
     size_t gen_assign(std::shared_ptr<ASTNode>& n);
@@ -69,9 +73,11 @@ class LMC_API Generator {
     struct CompilingFrame {
         std::unique_ptr<CompilingFrame> last{nullptr};
         std::string name{"global"};
-        std::unordered_map<std::string, std::pair<bool, size_t>> locals; // name <mutable, here(locals index)>
+        std::unordered_map<std::string, std::pair<bool, uint16_t>> locals; // name <mutable, here>
 
-        explicit CompilingFrame(std::string name, const size_t ret_addr): name(std::move(name)) {}
+        uint16_t local_count{static_cast<uint16_t>(-1)};
+
+        explicit CompilingFrame(std::string name, std::unique_ptr<CompilingFrame>&& last): name(std::move(name)), last(std::move(last))  {}
 
         CompilingFrame() = default;
 
@@ -81,23 +87,58 @@ class LMC_API Generator {
          *
          * @return
          * 一般情况： （frame*, idx)
-         * 未找到情况： （frame*, SIZE_MAX) and cerr
+         * 未找到情况： （nullptr, SIZE_MAX)
          * ======================================= */
         auto find(const std::string& nme) {
-            using Tp_ = std::pair<CompilingFrame*, std::pair<bool,size_t>>;
+            using Tp_ = typename std::pair<CompilingFrame*, std::pair<bool, uint16_t>>;
             std::function<
-                Tp_(CompilingFrame*, const std::string&)>
-            finder = [&finder](CompilingFrame* cur, const std::string& name) {
+                Tp_(CompilingFrame*)>
+            finder = [&nme, &finder](CompilingFrame* cur) -> Tp_ {
                 for (const auto& [k, v]: cur->locals)
-                    if (k == name) return std::make_pair(cur, v);
-                if (cur->last) return finder(cur->last.get(), name);
+                    if (k == nme)
+                        return std::make_pair(cur, v);
+                if (cur->last) return finder(cur->last.get());
 
-                return std::make_pair(cur, std::make_pair(false, SIZE_MAX));
+                return std::make_pair(nullptr, std::make_pair(false, UINT16_MAX));
             };
-            return finder(this, nme);
+            return finder(this);
+        }
+
+        void for_each() {
+            for (const auto& [k, v]: this->locals) {
+                std::cout << k << " in reg" << v.second << std::endl;
+            }
+        }
+
+        unsigned short new_var(const std::string& name, bool is_mut, uint16_t addr) {
+            if (!locals.contains(name)) {
+                if (addr > local_count) {
+                    locals.reserve(addr + 1);
+                    local_count = addr;
+                }
+                locals[name] = std::make_pair(is_mut, addr);
+            } else error("redefined var: `" + name + "`");
+            return local_count;
+        }
+        unsigned short new_var(const std::string& name, bool is_mut) {
+            return new_var(name, is_mut, ++local_count);
         }
     };
     std::unique_ptr<CompilingFrame> cur;
+    std::unordered_map<std::string, std::pair<uint8_t, size_t>> funcs;
+    void new_func(const std::string & name, uint8_t size) {
+        if (!funcs.contains(name)) {
+            funcs[name] = std::make_pair(size, togging());
+        } else error("redefined function: `" + name + "`");
+    }
+    void new_func(const std::string & name, uint8_t size, size_t addr) {
+        if (funcs.find(name) == funcs.end()) {
+            funcs[name] = std::make_pair(size, addr);
+        } else error("redefined function: `" + name + "`");
+    }
+    bool find_func(const std::string & name) const {
+        return funcs.contains(name);
+    }
 public:
     Allocator regs;
     Generator() : cur(std::make_unique<CompilingFrame>()){}
@@ -111,11 +152,17 @@ public:
     std::vector<char> constant_pool;
 
 
-    size_t gen(std::shared_ptr<ASTNode>& n);
+    size_t gen(std::shared_ptr<ASTNode> &n);
+
+    [[nodiscard]] size_t togging() const {return ops.size();}
 
     void print_ops();
 
-    [[nodiscard]] size_t tagging() const { return ops.size(); }
+    void print_vars() {
+        for (auto& v: cur->locals) {
+            std::cout << v.first << " at address: " << v.second.second << " mutable: " << (v.second.first ? "true" : "false") << std::endl;
+        }
+    }
 };
 
 }

@@ -210,6 +210,7 @@ std::shared_ptr<ProgramASTNode> Parser::parse_program() {
     }
     return std::make_shared<ProgramASTNode>(stmts);
 }
+
 std::shared_ptr<ExprNode> Parser::factor() {
     std::shared_ptr<ExprNode> fact = nullptr;
     if (match(TokenType::NUM_LITERAL)) {
@@ -233,7 +234,7 @@ std::shared_ptr<ExprNode> Parser::factor() {
         if (!match(TokenType::LPAREN)) fact = make_shared<VarRefNode>(name);
         else {
             advance();
-            std::vector<std::shared_ptr<ExprNode>> args;
+            std::vector<std::shared_ptr<ASTNode>> args;
             while (true) {
                 if (match(TokenType::RPAREN)) {
                     advance();
@@ -255,6 +256,7 @@ std::shared_ptr<ExprNode> Parser::factor() {
         }
 
     } else {
+        //error("unknown token: `" + cur().text + "`");
         advance();
     }
     return fact;

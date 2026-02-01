@@ -30,8 +30,8 @@ int run_repl() {
             auto op = gener.gen(node);
             if (lmx::node_has_error) continue;
             gener.ops.emplace_back(lmx::runtime::Opcode::HALT);
-            gener.print_ops();
-            continue;
+            //gener.print_ops();
+            //continue;
             const auto start = std::chrono::high_resolution_clock::now();
             core.run();
             const auto end = std::chrono::high_resolution_clock::now();
@@ -46,4 +46,5 @@ int run_repl() {
         }
     }
     return 0;
+
 }

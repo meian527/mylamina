@@ -26,6 +26,8 @@ class LMC_API Parser {
 
     std::shared_ptr<ExprNode> factor();
 
+    std::shared_ptr<ExprNode> parse_func_call();
+
     bool peek_match(TokenType type) const;
 
     void check_eof();
@@ -36,6 +38,13 @@ class LMC_API Parser {
 
     std::shared_ptr<ASTNode> parse_if();
     std::shared_ptr<ExprNode> parse_expr();
+
+    std::shared_ptr<ExprNode> parse_logical_and();
+
+    std::shared_ptr<ExprNode> parse_relational();
+
+    std::shared_ptr<ExprNode> parse_logical_or();
+
     std::shared_ptr<ASTNode> parse_funcdecl();
 
 public:

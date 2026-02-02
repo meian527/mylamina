@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by geguj on 2025/12/27.
 //
 
@@ -32,6 +32,8 @@ enum class Opcode {
     LOCAL_GET_FLOAT, LOCAL_SET_FLOAT,
     LOCAL_GET_BOOL, LOCAL_SET_BOOL,
 
+    AND, OR,
+    VMC,  // vmcall
 };
 
 struct Op {

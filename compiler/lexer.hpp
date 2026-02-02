@@ -9,7 +9,7 @@
 #include "../include/lmx_export.hpp"
 
 namespace lmx {
-enum class LMC_API TokenType {
+enum class /*LMC_API*/ TokenType {
     END_OF_FILE,
     OPER_PLUS, OPER_MINUS, OPER_MUL, OPER_DIV, OPER_MOD, OPER_POW,
 
@@ -17,12 +17,13 @@ enum class LMC_API TokenType {
 
     LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE,
 
-    EQ, NE, LT, GT, LE, GE,
+    EQ, NE, LT, GT, LE, GE, PIPE, OR, AND,
 
     NUM_LITERAL, STRING_LITERAL, TRUE_LITERAL, FALSE_LITERAL, IDENTIFIER,
 
     KW_FUNC, KW_RETURN,
-    UNKNOWN, KW_IF, KW_ELSE, KW_LET
+    UNKNOWN, KW_IF, KW_ELSE, KW_LET,
+    KW_VMC,
 };
 
 struct LMC_API Token {
@@ -42,7 +43,7 @@ class LMC_API Lexer {
     Token next();
 public:
     explicit Lexer(std::string& src): src(src) {};
-    std::vector<Token> tokenize(std::string& src);
+    std::vector<Token> tokenize(const std::string &new_src);
 };
 
 }

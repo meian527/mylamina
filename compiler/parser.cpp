@@ -13,6 +13,7 @@ namespace lmx {
 void Parser::advance() {
     if (pos < tokens.size()) {
         pos++;
+        if (cur().type == TokenType::UNKNOWN) error("unknown token: `" + cur().text + "`");
     }
 }
 
@@ -45,6 +46,7 @@ void Parser::error(const std::string& msg) {
 }
 std::shared_ptr<BlockStmtNode> Parser::parse_block() {
     if (!match(TokenType::LBRACE)) error("expected '{'");
+    advance();
     std::vector<std::shared_ptr<ASTNode>> stmts;
     while (!match(TokenType::RBRACE) && !is_eof()) {
         if (const auto stmt = parse()) stmts.push_back(stmt);
@@ -54,9 +56,46 @@ std::shared_ptr<BlockStmtNode> Parser::parse_block() {
     return std::make_shared<BlockStmtNode>(stmts);
 }
 std::shared_ptr<ExprNode> Parser::parse_expr() {
+    std::shared_ptr<ExprNode> node;
+    if (match(TokenType::STRING_LITERAL)) {
+        node = std::make_shared<StringNode>(cur().text);
+        advance();
+        return node;
+    }
+    node = parse_logical_and();
+    while (match(TokenType::PIPE) ) {
+        auto op = cur().text;
+        advance();
+        auto n2 = parse_logical_and();
+        if (n2->kind != FuncCallExpr) {
+            error("expected func calling expr");
+        }
+        node = std::make_shared<BinaryNode>(node, n2, op);
+    }
+    return node;
+}
+std::shared_ptr<ExprNode> Parser::parse_logical_and() {
+    std::shared_ptr<ExprNode> node = parse_logical_or();
+    while (match(TokenType::AND) ) {
+        auto op = cur().text;
+        advance();
+        node = std::make_shared<BinaryNode>(node, parse_logical_or(), op);
+    }
+    return node;
+}
+std::shared_ptr<ExprNode> Parser::parse_logical_or() {
+    std::shared_ptr<ExprNode> node = parse_relational();
+    while (match(TokenType::OR) ) {
+        auto op = cur().text;
+        advance();
+        node = std::make_shared<BinaryNode>(node, parse_relational(), op);
+    }
+    return node;
+}
+std::shared_ptr<ExprNode> Parser::parse_relational() {
     std::shared_ptr<ExprNode> node = expr();
-    if (match(TokenType::EQ) || match(TokenType::LT) || match(TokenType::GT) ||
-        match(TokenType::LE) || match(TokenType::GE)) {
+    while (match(TokenType::EQ) || match(TokenType::LT) || match(TokenType::GT) ||
+        match(TokenType::LE) || match(TokenType::GE) || match(TokenType::NE)    ) {
         auto op = cur().text;
         advance();
         node = std::make_shared<BinaryNode>(node, parse_expr(), op);
@@ -136,7 +175,7 @@ std::shared_ptr<ASTNode> Parser::parse() {
     }
     case TokenType::KW_RETURN: {
         advance();
-        auto e = expr();
+        auto e = parse_expr();
         if (!in_func) {
             error("expected 'return'");
         }
@@ -146,7 +185,6 @@ std::shared_ptr<ASTNode> Parser::parse() {
     case TokenType::KW_IF: {
         advance();
         node = parse_if();
-        advance();
         break;
     }
     default: {
@@ -154,8 +192,8 @@ std::shared_ptr<ASTNode> Parser::parse() {
             auto name = cur().text;
             advance();
             advance();
-            node = std::make_shared<VarDeclNode>(name, expr());
-        } else node = expr();
+            node = std::make_shared<VarDeclNode>(name, parse_expr());
+        } else node = parse_expr();
         break;
     }
     }
@@ -231,7 +269,8 @@ std::shared_ptr<ExprNode> Parser::factor() {
     } else if (match(TokenType::IDENTIFIER)) {
         auto name = cur().text;
         advance();
-        if (!match(TokenType::LPAREN)) fact = make_shared<VarRefNode>(name);
+        if (!match(TokenType::LPAREN))
+            fact = make_shared<VarRefNode>(name);
         else {
             advance();
             std::vector<std::shared_ptr<ASTNode>> args;
@@ -254,9 +293,12 @@ std::shared_ptr<ExprNode> Parser::factor() {
             }
             fact = std::make_shared<FuncCallExprNode>(name, args);
         }
-
-    } else {
-        //error("unknown token: `" + cur().text + "`");
+    } else if (match(TokenType::TRUE_LITERAL) || match(TokenType::FALSE_LITERAL)) {
+        fact = std::make_shared<BoolNode>(cur().text == "true");
+        advance();
+    }
+    else {
+        error("unknown token: `" + cur().text + "`");
         advance();
     }
     return fact;

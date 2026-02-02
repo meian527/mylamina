@@ -109,8 +109,8 @@ int VirtualCore::run() {
     case FCALL: {
         ste.ret_addr_stack.push_back(ste.pc + 1); // 返回地址
         ste.pc = *reinterpret_cast<const uint64_t*>(operands); // 跳转地址
-        ste.cur = std::make_unique<StackFrame>(std::move(ste.cur)); //新建栈帧
         const auto args_count = operands[8]; // 传参数量
+        ste.cur = std::make_unique<StackFrame>(std::move(ste.cur)); //新建栈帧
         ste.cur->locals.resize(args_count + 1);
         for (uint8_t i = 0; i != args_count; i++) ste.cur->locals[i] = ste.regs[REG_COUNT_INDEX_MAX - i];
         goto RUN_CONTINUE;
@@ -210,6 +210,21 @@ int VirtualCore::run() {
     }
     case LOCAL_SET_BOOL: {
         ste.cur->locals[*(uint16_t*)(operands)].b = ste.regs[operands[2]].b;
+        ste.pc++;
+        goto RUN_CONTINUE;
+    }
+    case AND: {
+        ste.regs[operands[0]].b = ste.regs[operands[1]].b && ste.regs[operands[2]].b;
+        ste.pc++;
+        goto RUN_CONTINUE;
+    }
+    case OR: {
+        ste.regs[operands[0]].b = ste.regs[operands[1]].b || ste.regs[operands[2]].b;
+        ste.pc++;
+        goto RUN_CONTINUE;
+    }
+    case VMC: {
+
         ste.pc++;
         goto RUN_CONTINUE;
     }

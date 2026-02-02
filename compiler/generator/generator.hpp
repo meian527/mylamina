@@ -55,6 +55,8 @@ class LMC_API Generator {
     size_t gen_return(std::shared_ptr<ASTNode>& n);
     size_t gen_func_call(std::shared_ptr<ASTNode>& n);
 
+    size_t basic_gen_func_call(std::shared_ptr<ASTNode> &n, size_t args_idx);
+
     size_t gen_unary(std::shared_ptr<ASTNode>& n);
 
     size_t gen_string(std::shared_ptr<ASTNode>& n);
@@ -63,6 +65,9 @@ class LMC_API Generator {
 
     size_t gen_block(std::shared_ptr<ASTNode>& n);
 
+    auto tagging() const { return ops.size(); }
+    void new_frame(const std::string& name) { cur = std::make_unique<CompilingFrame>(name, std::move(cur));}
+    void free_frame() { cur = std::move(cur->last); };
     size_t gen_if(std::shared_ptr<ASTNode>& n);
 
     static void error(const std::string& msg) {
@@ -86,31 +91,28 @@ class LMC_API Generator {
          * find the var named `name` up to frames
          *
          * @return
-         * 一般情况： （frame*, idx)
-         * 未找到情况： （nullptr, SIZE_MAX)
+         * 一般情况： （frame*, (mutable, idx))
+         * 未找到情况： （nullptr, (false, UINT16_MAX))
          * ======================================= */
-        auto find(const std::string& nme) {
-            using Tp_ = typename std::pair<CompilingFrame*, std::pair<bool, uint16_t>>;
-            std::function<
-                Tp_(CompilingFrame*)>
-            finder = [&nme, &finder](CompilingFrame* cur) -> Tp_ {
-                for (const auto& [k, v]: cur->locals)
+        auto find(const std::string& nme) -> std::pair<CompilingFrame*, std::pair<bool, uint16_t>> {
+            auto c = this;
+            while (c) {
+                // 在当前帧中查找
+                for (const auto& [k, v] : c->locals)
                     if (k == nme)
-                        return std::make_pair(cur, v);
-                if (cur->last) return finder(cur->last.get());
-
-                return std::make_pair(nullptr, std::make_pair(false, UINT16_MAX));
-            };
-            return finder(this);
-        }
-
-        void for_each() {
-            for (const auto& [k, v]: this->locals) {
-                std::cout << k << " in reg" << v.second << std::endl;
+                        return {c, v};
+                // 跳转到上一帧
+                if (c->last) {
+                    c = c->last.get();
+                } else {
+                    c = nullptr;
+                }
             }
+            // 未找到
+            return {nullptr, {false,UINT16_MAX}};
         }
 
-        unsigned short new_var(const std::string& name, bool is_mut, uint16_t addr) {
+        uint16_t new_var(const std::string& name, bool is_mut, uint16_t addr) {
             if (!locals.contains(name)) {
                 if (addr > local_count) {
                     locals.reserve(addr + 1);
@@ -120,7 +122,7 @@ class LMC_API Generator {
             } else error("redefined var: `" + name + "`");
             return local_count;
         }
-        unsigned short new_var(const std::string& name, bool is_mut) {
+        uint16_t new_var(const std::string& name, bool is_mut) {
             return new_var(name, is_mut, ++local_count);
         }
     };

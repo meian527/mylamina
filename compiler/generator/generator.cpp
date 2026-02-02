@@ -86,14 +86,25 @@ size_t Generator::gen_program(std::shared_ptr<ASTNode> &n) {
 
 size_t Generator::gen_binary(std::shared_ptr<ASTNode>& n) {
     const auto node = std::static_pointer_cast<BinaryNode>(std::move(n));
+    volatile size_t tmp = regs.alloc();
+    volatile auto lr = gen(node->left);
+    LMXOpcodeEmitter::emit_mov_rr(ops, tmp, lr);
+    if (expr_release) regs.free(lr);
+    lr = tmp;
 
-
-    const volatile auto lr = gen(node->left);
-    const volatile auto lr_can = expr_release;
-
-    const volatile auto rr = gen(node->right);
-    const volatile auto rr_can = expr_release;
-    const auto expr_ret_reg = regs.alloc();
+    volatile size_t expr_ret_reg;
+    if (node->op == "|>") {
+        LMXOpcodeEmitter::emit_mov_rr(ops, REG_COUNT_INDEX_MAX, lr);
+        expr_ret_reg = basic_gen_func_call(node->right, 1);
+        expr_release = true;
+        return expr_ret_reg;
+    }
+    volatile size_t rr = gen(node->right);
+    tmp = regs.alloc();
+    LMXOpcodeEmitter::emit_mov_rr(ops, tmp, rr);
+    if (expr_release) regs.free(rr);
+    rr = tmp;
+    expr_ret_reg = regs.alloc();
 
     if (node->op == "!=") {
         LMXOpcodeEmitter::emit_cmp_ne(ops, expr_ret_reg, lr, rr);
@@ -119,12 +130,16 @@ size_t Generator::gen_binary(std::shared_ptr<ASTNode>& n) {
         LMXOpcodeEmitter::emit_mod(ops, expr_ret_reg, lr, rr);
     } else if (node->op == "^")  {
         LMXOpcodeEmitter::emit_pow(ops, expr_ret_reg, lr, rr);
-    } else {
+    } else if (node->op == "||") {
+        LMXOpcodeEmitter::emit_or(ops, expr_ret_reg, lr, rr);
+    } else if (node->op == "&&") {
+        LMXOpcodeEmitter::emit_and(ops, expr_ret_reg, lr, rr);
+    }
+    else {
         node_has_error = true;
         error("operator: `" + node->op + "' is not defined.");
+        return -1;
     }
-    if (lr_can) regs.free(lr);
-    if (rr_can) regs.free(rr);
     expr_release = true;
     return expr_ret_reg;
 }
@@ -139,11 +154,11 @@ size_t Generator::gen_num(std::shared_ptr<ASTNode>& n) {
 size_t Generator::gen_assign(std::shared_ptr<ASTNode>& n) {
     const auto node = std::static_pointer_cast<VarDeclNode>(std::move(n));
     size_t expr_ret_reg = 0;
-    if (const auto v = cur->find(node->name); v.first) {
+    if (const auto [fst, snd] = cur->find(node->name); fst) {
         //如果可变
-        if (v.second.first) {
+        if (snd.first) {
             expr_ret_reg = gen(node->value);
-            LMXOpcodeEmitter::emit_local_set_int(ops, v.first->locals[node->name].second, expr_ret_reg);
+            LMXOpcodeEmitter::emit_local_set_int(ops, fst->locals[node->name].second, expr_ret_reg);
         } else {
             error("The var `" + node->name + "' is not mutable.");
         }
@@ -160,7 +175,11 @@ size_t Generator::gen_var_ref(std::shared_ptr<ASTNode>& n) {
     size_t expr_ret_reg = regs.alloc();
     if (t.second != UINT16_MAX) {
         LMXOpcodeEmitter::emit_local_get_int(ops, expr_ret_reg, t.second);
-    } else std::cerr << "The var `" + node->name + "` is not found!" << std::endl;
+    } else {
+        regs.free(expr_ret_reg);
+        expr_ret_reg = -1;
+        std::cerr << "The var `" + node->name + "` is not found!" << std::endl;
+    }
     expr_release = false;
     return expr_ret_reg;
 }
@@ -171,13 +190,13 @@ size_t Generator::gen_return(std::shared_ptr<ASTNode> &n) {
     LMXOpcodeEmitter::emit_mov_rr(ops, 0, expr_ret_reg);
     LMXOpcodeEmitter::emit_fret(ops);
     if (expr_release) regs.free(expr_ret_reg);
-    return expr_ret_reg;
+    return 0;
 }
 
 size_t Generator::gen_function(std::shared_ptr<ASTNode> &n) {
     const auto node = std::static_pointer_cast<FuncDeclNode>(std::move(n));
     LMXOpcodeEmitter::emit_func_create(ops);
-    cur = std::make_unique<CompilingFrame>(node->name, std::move(cur));
+    new_frame(node->name);
     const auto args_count = node->args.size();
 
     new_func(node->name, args_count); //函数不做作用域区分，全部全局
@@ -189,21 +208,27 @@ size_t Generator::gen_function(std::shared_ptr<ASTNode> &n) {
     gen(node->body);
     LMXOpcodeEmitter::emit_fret(ops);
     LMXOpcodeEmitter::emit_func_end(ops);
-    cur = std::move(cur->last);
+    free_frame();
     return -1;
 }
 
 size_t Generator::gen_func_call(std::shared_ptr<ASTNode> &n) {
+    return basic_gen_func_call(n, 0);
+}
+size_t Generator::basic_gen_func_call(std::shared_ptr<ASTNode> &n, const size_t args_idx) {
     const auto node = std::static_pointer_cast<FuncCallExprNode>(std::move(n));
     if (find_func(node->name)) {
-        const auto&[tar_ac, addr] = funcs[node->name];
+        const auto& [tar_ac, addr] = funcs[node->name];
         const auto args_count = node->args.size();
-        if (args_count != tar_ac) error(
-            "args num mismatch: "
+        if (args_count + args_idx != tar_ac) {
+            error(
+        "args num mismatch: "
             + std::to_string(args_count)
             + " != "
             + std::to_string(tar_ac) + " at function calling `" + node->name + "`");
-        for (size_t i = 0; i < args_count ; i++) {
+            return -1;
+        }
+        for (size_t i = args_idx; i < args_count ; i++) {
             const auto expr_ret = gen(node->args[i]);
 
             LMXOpcodeEmitter::emit_mov_rr(ops , REG_COUNT_INDEX_MAX - i, expr_ret);
@@ -238,11 +263,19 @@ size_t Generator::gen_unary(std::shared_ptr<ASTNode> &n) {
 }
 
 size_t Generator::gen_string(std::shared_ptr<ASTNode> &n) {
-    return -1;
+    const auto node = std::static_pointer_cast<StringNode>(std::move(n));
+    const auto expr_ret = constant_pool.size();
+    constant_pool.insert(constant_pool.end(), node->str.begin(), node->str.end());
+    expr_release = false;
+    return expr_ret;
 }
 
 size_t Generator::gen_bool(std::shared_ptr<ASTNode> &n) {
-    return -1;
+    const auto node = std::static_pointer_cast<BoolNode>(std::move(n));
+    const auto expr_ret_reg = regs.alloc();
+    LMXOpcodeEmitter::emit_mov_ri(ops, expr_ret_reg, node->b);
+    expr_release = true;
+    return expr_ret_reg;
 }
 
 size_t Generator::gen_block(std::shared_ptr<ASTNode> &n) {
@@ -253,19 +286,43 @@ size_t Generator::gen_block(std::shared_ptr<ASTNode> &n) {
 }
 
 size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
+    const auto node = std::static_pointer_cast<IfStmtNode>(std::move(n));
+    const auto cond = gen(node->condition);
+
+    const auto the = tagging();
+    LMXOpcodeEmitter::emit_if_true(ops, cond, 0);
+
+    const auto els = tagging();
+    LMXOpcodeEmitter::emit_jmp(ops, 0);
+
+    auto tmp = tagging();
+    memcpy(ops[the].operands + 1, &tmp, sizeof(tmp));
+    static size_t counter = 0;
+    new_frame("@if@_" + std::to_string(counter++));
+    gen(node->thenBlock);
+    free_frame();
+    tmp = tagging();
+    memcpy(ops[els].operands, &tmp, sizeof(tmp));
+    if (node->elseBlock) {
+        new_frame("@else@_" + std::to_string(counter++));
+        gen(node->elseBlock);
+        free_frame();
+    }
     return -1;
 }
 
 void Generator::print_ops() {
+    size_t i = 0;
     for (auto &op: ops) {
+        printf("[0x%llx]\t", i++);
         switch (op.op) {
             using enum runtime::Opcode;
         case MOV_RI: {
-            printf("MOVRI: %d, %llu\n", op.operands[0], *reinterpret_cast<int64_t *>(op.operands + 1));
+            printf("MOVRI: %d, %lld\n", op.operands[0], *reinterpret_cast<int64_t *>(op.operands + 1));
             break;
         }
         case MOV_RM: {
-            printf("MOVRM: %d, %llu\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
+            printf("MOVRM: %d, 0x%llu\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
             break;
         }
         case MOV_RR: {
@@ -273,7 +330,7 @@ void Generator::print_ops() {
             break;
         }
         case MOV_RC: {
-            printf("MOVRC: %u, %llu\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
+            printf("MOVRC: %u, 0x%llu\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
             break;
         }
         case MOV_MI: {
@@ -310,7 +367,7 @@ void Generator::print_ops() {
             break;
         }
         case FCALL: {
-            printf("FCALL: %lld\n", *reinterpret_cast<uint64_t *>(op.operands));
+            printf("FCALL: 0x%llx, 0x%u\n", *reinterpret_cast<uint64_t *>(op.operands), op.operands[8]);
             break;
         }
         case FRET: {
@@ -326,7 +383,7 @@ void Generator::print_ops() {
             break;
         }
         case JMP: {
-            printf("JMP: %lld\n", *reinterpret_cast<uint64_t *>(op.operands));
+            printf("JMP: 0x%llx\n", *reinterpret_cast<uint64_t *>(op.operands));
             break;
         }
         case CMP_GE: {
@@ -354,11 +411,11 @@ void Generator::print_ops() {
             break;
         }
         case IF_TRUE: {
-            printf("IF_TRUE: %u\n", op.operands[0]);
+            printf("IF_TRUE: %u, 0x%llx\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
             break;
         }
         case IF_FALSE: {
-            printf("IF_FALSE: %u\n", op.operands[0]);
+            printf("IF_FALSE: %u, 0x%llx\n", op.operands[0], *reinterpret_cast<uint64_t *>(op.operands + 1));
             break;
         }
         case LOCAL_GET_BOOL: {
@@ -393,8 +450,22 @@ void Generator::print_ops() {
             printf("FUNC_END\n");
             break;
         }
+        case AND: {
+            printf("AND: %u, %u\n", op.operands[0], op.operands[1]);
+            break;
+        }
+        case OR: {
+            printf("OR: %u, %u\n", op.operands[0], op.operands[1]);
+            break;
+        }
+        case VMC: {
+            printf("VMC: %d\n", *(uint16_t*)op.operands);
+            break;
+        }
         }
     }
+
+    printf("[0x%llx]\tHALT\n", i);
 }
 
 

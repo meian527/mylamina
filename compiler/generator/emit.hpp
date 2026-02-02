@@ -19,7 +19,12 @@ class LMC_API LMXOpcodeEmitter {
 
     template<class... Args>
     static void write_regs(uint8_t* dst, Args... args);
+
 public:
+    enum Ret_Type {
+        None, Reg, Addr
+    };
+    static Ret_Type ret_type;
     static void emit_mov_ri(std::vector<lmx::runtime::Op>& ops, uint8_t r1, int64_t imm);
     static void emit_mov_rr(std::vector<lmx::runtime::Op>& ops, uint8_t r1, uint8_t r2);
     static void emit_mov_rm(std::vector<lmx::runtime::Op>& ops, uint8_t r1, uint8_t r2, int8_t offest);
@@ -65,6 +70,10 @@ public:
     static void emit_local_set_float(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r);
     static void emit_local_get_bool(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx);
     static void emit_local_set_bool(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r);
+
+    static void emit_and(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint8_t r2, uint8_t r3);
+
+    static void emit_or(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint8_t r2, uint8_t r3);
 };
 
 } // namespace lmx

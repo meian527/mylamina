@@ -76,10 +76,8 @@ struct BlockStmtNode final : public StmtNode {
           children(std::move(children)) {}
 };
 
-struct IfStmtNode : public StmtNode {
-    std::shared_ptr<ExprNode> condition;
-    std::shared_ptr<BlockStmtNode> thenBlock;
-    std::shared_ptr<BlockStmtNode> elseBlock;
+struct IfStmtNode final : public StmtNode {
+    std::shared_ptr<ASTNode> condition, thenBlock, elseBlock;
     
     explicit IfStmtNode(
         std::shared_ptr<ExprNode> condition,
@@ -158,6 +156,20 @@ struct NumberNode final : public ExprNode {
           num(std::move(num)) {}
     
     ~NumberNode() override = default;
+};
+struct BoolNode final : public ExprNode {
+    bool b;
+    explicit BoolNode(bool b)
+        : ExprNode(ASTKind::BoolLiteral),
+            b(b) {}
+
+    ~BoolNode() override = default;
+};
+struct StringNode final : public ExprNode {
+    std::string str;
+    explicit StringNode(std::string str)
+        : ExprNode(ASTKind::StringLiteral), str(std::move(str)) {}
+    ~StringNode() override = default;
 };
 
 struct BinaryNode final : public ExprNode {

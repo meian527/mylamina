@@ -174,6 +174,26 @@ Token Lexer::next() {
             }
             return {TokenType::NOT, "!", line, col};
         }
+        case '|': {
+            advance();
+            if (src[pos] == '>') {
+                advance();
+                return {TokenType::PIPE, "|>", line, col};
+            }
+            if (src[pos] == '|') {
+                advance();
+                return {TokenType::OR, "||", line, col};
+            }
+            return {TokenType::UNKNOWN, std::string(1, src[pos]), line, col};
+        }
+        case '&': {
+            advance();
+            if (src[pos] == '&') {
+                advance();
+                return {TokenType::AND, "&&", line, col};
+            }
+            return {TokenType::UNKNOWN, std::string(1, src[pos]), line, col};
+        }
         default: {
             if (isdigit(src[pos])) {
                 std::string num;
@@ -198,7 +218,8 @@ Token Lexer::next() {
                     {"return", TokenType::KW_RETURN},
                     {"if", TokenType::KW_IF},
                     {"else", TokenType::KW_ELSE},
-                    {"let", TokenType::KW_LET}
+                    {"let", TokenType::KW_LET},
+                    {"__VmC", TokenType::KW_VMC},
                 };
                 if (const auto it = keywords.find(id); it != keywords.end()) {
                     return {it->second, id, line, col - id.size()};
@@ -207,11 +228,13 @@ Token Lexer::next() {
             }
         }
     }
+
+    auto token = Token{TokenType::UNKNOWN, std::string(1, src[pos]), line, col};
     advance();
-    return {TokenType::UNKNOWN, "", line, col};
+    return token;
 }
 
-std::vector<Token> Lexer::tokenize(std::string& new_src) {
+std::vector<Token> Lexer::tokenize(const std::string& new_src) {
     src = new_src;
     pos = 0;
     line = 1;

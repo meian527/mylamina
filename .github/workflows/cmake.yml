@@ -83,7 +83,7 @@ jobs:
     # Additional flags to pass when compiling C language files
           c-flags: -O3 -g0 -flto
     # Additional flags to pass when compiling C++ language files
-          cxx-flags: -O3 -g0 -flto
+          cxx-flags: -O3 -g0 -flto -std=c++23
     # Additional options to pass during the CMake configuration
           options: # optional
     # Additional arguments to pass during the CMake configuration

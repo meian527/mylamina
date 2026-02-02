@@ -71,7 +71,7 @@ jobs:
         uses: threeal/cmake-action@v2.1.0
         with:
           # The source directory of the CMake project
-          source-dir: compiler runtime tools
+          source-dir: 
     # The build directory of the CMake project
           build-dir: build
     # The build system generator for the CMake project

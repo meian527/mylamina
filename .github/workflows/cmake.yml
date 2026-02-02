@@ -75,7 +75,7 @@ jobs:
     # The build directory of the CMake project
           build-dir: build
     # The build system generator for the CMake project
-          generator: Ninja
+          generator: 
     # The preferred executable for compiling C language files
           c-compiler: gcc
     # The preferred executable for compiling C++ language files

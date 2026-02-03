@@ -13,7 +13,7 @@ endif()
 if(BUILD_SHARED_LIBS OR WIN32)
     add_definitions(-DLMX_DLL)
 endif()
-
+include_directories(include)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 

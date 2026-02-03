@@ -16,6 +16,9 @@ class LMC_API Parser {
     bool has_err{false};
     std::vector<Token>& tokens;
     size_t pos{0};
+
+    void parse_args(std::vector<std::shared_ptr<ASTNode>> &args);
+
     void advance();
     [[nodiscard]] Token& cur() const;
     [[nodiscard]] bool match(TokenType t) const;
@@ -35,6 +38,8 @@ class LMC_API Parser {
     void error(const std::string& msg);
 
     std::shared_ptr<BlockStmtNode> parse_block();
+
+    std::shared_ptr<ExprNode> parse_string();
 
     std::shared_ptr<ASTNode> parse_if();
     std::shared_ptr<ExprNode> parse_expr();

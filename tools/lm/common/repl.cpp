@@ -13,9 +13,8 @@ int run_repl() {
     lmx::Generator gener;
     lmx::runtime::VirtualCore core;
     core.set_program(&gener.ops);
-    std::string prompt = ">>>";
 
-    size_t last_size = 0, last_pc = 0;
+    std::string prompt = ">>>";
     while (true) {
         std::cout << std::flush << prompt << std::flush;
         if (!std::getline(std::cin, expr)) break;
@@ -37,15 +36,16 @@ int run_repl() {
             gener.ops.emplace_back(lmx::runtime::Opcode::HALT);
             //gener.print_ops();
             //continue;
-            const auto start = std::chrono::high_resolution_clock::now();
+            core.set_constant(gener.constant_pool.data());
+            //const auto start = std::chrono::high_resolution_clock::now();
             core.run();
-            const auto end = std::chrono::high_resolution_clock::now();
+            //const auto end = std::chrono::high_resolution_clock::now();
 
             if (op != -1) {
                 gener.regs.free(op);
-                std::cout << core.look_register(op) << std::endl;
+                std::cout << "Result: " << core.look_register(op) << std::endl;
             }
-            std::cout << "time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start) << std::endl;
+            //std::cout << "time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start) << std::endl;
             if (gener.ops.back().op == lmx::runtime::Opcode::HALT) gener.ops.pop_back();
         }
     }

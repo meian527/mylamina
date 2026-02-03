@@ -52,10 +52,15 @@ class LMC_API Generator {
     size_t gen_num(std::shared_ptr<ASTNode>& n);
     size_t gen_assign(std::shared_ptr<ASTNode>& n);
     size_t gen_var_ref(std::shared_ptr<ASTNode>& n);
+
+    size_t gen_vmc(std::shared_ptr<ASTNode> &n);
+
     size_t gen_return(std::shared_ptr<ASTNode>& n);
     size_t gen_func_call(std::shared_ptr<ASTNode>& n);
 
     size_t basic_gen_func_call(std::shared_ptr<ASTNode> &n, size_t args_idx);
+
+    void basic_gen_pass_args(std::vector<std::shared_ptr<ASTNode>> &args, size_t args_idx, size_t args_count);
 
     size_t gen_unary(std::shared_ptr<ASTNode>& n);
 
@@ -67,7 +72,7 @@ class LMC_API Generator {
 
     auto tagging() const { return ops.size(); }
     void new_frame(const std::string& name) { cur = std::make_unique<CompilingFrame>(name, std::move(cur));}
-    void free_frame() { cur = std::move(cur->last); };
+    void free_frame() { cur = std::move(cur->last); }
     size_t gen_if(std::shared_ptr<ASTNode>& n);
 
     static void error(const std::string& msg) {

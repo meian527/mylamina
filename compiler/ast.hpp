@@ -29,6 +29,7 @@ enum ASTKind {
     FuncDecl,
     FuncCallExpr,
     Return,
+    VMCall,
 };
 
 struct LMC_API ASTNode {
@@ -195,6 +196,16 @@ struct UnaryNode final : public ExprNode {
         : ExprNode(ASTKind::Unary), 
           op(std::move(op)), 
           operand(std::move(operand)) {}
+};
+
+struct VMCallNode final : public StmtNode {
+
+    std::string idx;
+    std::vector<std::shared_ptr<ASTNode>> args;
+
+    explicit VMCallNode(std::string idx, std::vector<std::shared_ptr<ASTNode>> args) :
+        StmtNode(VMCall) ,idx(std::move(idx)), args(std::move(args)) {}
+
 };
 
 } // namespace lmx

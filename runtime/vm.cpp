@@ -7,6 +7,7 @@
 #include <iostream>
 #include <ostream>
 
+#include "vmcall.hpp"
 #include "../compiler/generator/generator.hpp"
 
 namespace lmx::runtime {
@@ -224,7 +225,7 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case VMC: {
-
+        VMCall::vmcall_table[*(uint16_t*)operands](this);
         ste.pc++;
         goto RUN_CONTINUE;
     }

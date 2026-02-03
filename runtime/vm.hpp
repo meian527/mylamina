@@ -7,9 +7,9 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "../include/lmx_export.hpp"
+#include "lmx_export.hpp"
 #include "value/value.hpp"
-#include "../include/opcode.hpp"
+#include "opcode.hpp"
 #include "frame/frame.hpp"
 
 namespace lmx::runtime {
@@ -41,6 +41,11 @@ public:
     [[nodiscard]] std::vector<Op> *get_program() const { return ste.program; }
     void set_program(std::vector<Op> *program) { ste.pc = 0;ste.program = program; }
     [[nodiscard]] int64_t look_register(const size_t r) const { return ste.regs[r].i64; }
+
+    [[nodiscard]] Value& get_register(const size_t r) { return ste.regs[r]; }
+
+    [[nodiscard]] void* get_constant() const { return const_pool_top; }
+    void set_constant(void* const_pool) { const_pool_top = const_pool; }
 };
 
 }

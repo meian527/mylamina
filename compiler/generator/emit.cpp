@@ -269,6 +269,13 @@ void LMXOpcodeEmitter::emit_or(std::vector<lmx::runtime::Op> &ops, uint8_t r1, u
     ops.push_back(op);
     ret_type = Reg;
 }
+
+void LMXOpcodeEmitter::emit_vmc(std::vector<lmx::runtime::Op> &ops, uint16_t idx) {
+    runtime::Op op(runtime::Opcode::VMC);
+    write_imm(op.operands, idx);
+    ops.push_back(op);
+    ret_type = None;
+}
 #undef getter_opt_code
 } // namespace lmx
 

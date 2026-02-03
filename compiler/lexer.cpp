@@ -131,6 +131,21 @@ Token Lexer::next() {
             advance();
             std::string str;
             while (src[pos] != '"') {
+                if (src[pos] == '\\') {
+                    advance();
+                    switch (src[pos]) {
+                        case 'n': str += '\n'; break;
+                        case 't': str += '\t'; break;
+                        case 'r': str += '\r'; break;
+                        case 'b': str += '\b'; break;
+                        case 'f': str += '\f'; break;
+                        case 'v': str += '\v'; break;
+                        case '0': str += '\0'; break;
+                        default: str += src[pos]; break;
+                    }
+                    advance();
+                    continue;
+                }
                 str += src[pos];
                 advance();
             }
@@ -207,9 +222,9 @@ Token Lexer::next() {
                 }
                 return {TokenType::NUM_LITERAL, num, line, col - num.size()};
             }
-            if (isalpha(src[pos])) {
+            if (isalpha(src[pos]) || src[pos] == '_') {
                 std::string id;
-                while (isalnum(src[pos])) {
+                while (isalnum(src[pos])|| src[pos] == '_') {
                     id += src[pos];
                     advance();
                 }
@@ -219,7 +234,7 @@ Token Lexer::next() {
                     {"if", TokenType::KW_IF},
                     {"else", TokenType::KW_ELSE},
                     {"let", TokenType::KW_LET},
-                    {"__VmC", TokenType::KW_VMC},
+                    {"__VMC", TokenType::KW_VMC},
                 };
                 if (const auto it = keywords.find(id); it != keywords.end()) {
                     return {it->second, id, line, col - id.size()};

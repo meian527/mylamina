@@ -10,6 +10,32 @@
 
 namespace lmx {
 
+void Parser::parse_args(std::vector<std::shared_ptr<ASTNode>> &args) {
+    if (!match(TokenType::LPAREN)) {
+        advance();
+        error("expected '(')");
+        return;
+    }
+    advance();
+    while (true) {
+        if (match(TokenType::RPAREN)) {
+            advance();
+            break;
+        }
+        args.push_back(parse_expr());
+        if (match(TokenType::COMMA)) advance();
+        else if (match(TokenType::RPAREN)) {
+            advance();
+            break;
+        }
+        else {
+            error("Missing ',' or ')'");
+            advance();
+            break;
+        }
+    }
+}
+
 void Parser::advance() {
     if (pos < tokens.size()) {
         pos++;
@@ -56,13 +82,7 @@ std::shared_ptr<BlockStmtNode> Parser::parse_block() {
     return std::make_shared<BlockStmtNode>(stmts);
 }
 std::shared_ptr<ExprNode> Parser::parse_expr() {
-    std::shared_ptr<ExprNode> node;
-    if (match(TokenType::STRING_LITERAL)) {
-        node = std::make_shared<StringNode>(cur().text);
-        advance();
-        return node;
-    }
-    node = parse_logical_and();
+    std::shared_ptr<ExprNode> node = parse_logical_and();
     while (match(TokenType::PIPE) ) {
         auto op = cur().text;
         advance();
@@ -187,6 +207,21 @@ std::shared_ptr<ASTNode> Parser::parse() {
         node = parse_if();
         break;
     }
+    case TokenType::KW_VMC: {
+        advance();
+        if (!match(TokenType::NUM_LITERAL)) {
+            advance();
+            error("expected numeric literal");
+            break;
+        }
+        auto idx = cur().text;
+        advance();
+        std::vector<std::shared_ptr<ASTNode>> args;
+        parse_args(args);
+
+        node = std::make_shared<VMCallNode>(idx, std::move(args));
+        break;
+    }
     default: {
         if (match(TokenType::IDENTIFIER) && peek_match(TokenType::ASSIGN)) {
             auto name = cur().text;
@@ -207,6 +242,7 @@ std::shared_ptr<ASTNode> Parser::parse_funcdecl() {
     advance();
     std::vector<std::string> params;
     while (true) {
+        if (match(TokenType::RPAREN)) break;
         if (!match(TokenType::IDENTIFIER)) {
             error("expected identifier");
             return nullptr;
@@ -256,45 +292,34 @@ std::shared_ptr<ExprNode> Parser::factor() {
         advance();
     } else if (match(TokenType::LPAREN)) {
         advance();
-        fact = expr();
+        fact = parse_expr();
         if (match(TokenType::RPAREN)) {
             advance();
         } else {
             error("Missing closing ')'");
         }
-    } else if (match(TokenType::OPER_MINUS) || match(TokenType::OPER_PLUS)) {
+    } else if (match(TokenType::OPER_MINUS)) {
         auto op = cur().text;
         advance();
-        fact = std::make_shared<UnaryNode>(op, expr());
+        fact = std::make_shared<UnaryNode>(op, parse_expr());
     } else if (match(TokenType::IDENTIFIER)) {
         auto name = cur().text;
         advance();
-        if (!match(TokenType::LPAREN))
+        if (!match(TokenType::LPAREN)) {
             fact = make_shared<VarRefNode>(name);
+        }
         else {
-            advance();
             std::vector<std::shared_ptr<ASTNode>> args;
-            while (true) {
-                if (match(TokenType::RPAREN)) {
-                    advance();
-                    break;
-                }
-                args.push_back(expr());
-                if (match(TokenType::COMMA)) advance();
-                else if (match(TokenType::RPAREN)) {
-                    advance();
-                    break;
-                }
-                else {
-                    error("Missing ',' or ')'");
-                    advance();
-                    break;
-                }
-            }
+            parse_args(args);
             fact = std::make_shared<FuncCallExprNode>(name, args);
         }
     } else if (match(TokenType::TRUE_LITERAL) || match(TokenType::FALSE_LITERAL)) {
         fact = std::make_shared<BoolNode>(cur().text == "true");
+        advance();
+    } else if (match(TokenType::END_OF_FILE)) {
+        advance();
+    } else if (match(TokenType::STRING_LITERAL)) {
+        fact = std::make_shared<StringNode>(cur().text);
         advance();
     }
     else {

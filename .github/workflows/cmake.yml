@@ -92,3 +92,8 @@ jobs:
           run-build: # optional, default is true
     # Additional arguments to pass during the CMake build
           build-args: # optional
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with: 
+          name: my-artifact
+          path: build/bin

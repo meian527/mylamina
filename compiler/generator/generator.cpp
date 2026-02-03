@@ -7,7 +7,6 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
-#include <print>
 
 #include "emit.hpp"
 #include "../../include/opcode.hpp"
@@ -467,6 +466,7 @@ void Generator::print_ops() {
 
     printf("[0x%llx]\tHALT\n", i);
 }
+
 
 
 } // namespace lmx

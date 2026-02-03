@@ -53,10 +53,7 @@ jobs:
 
       - name: Configure CMake
         run: |
-          cmake -B ${{github.workspace}}/build \
-                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-                -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-                -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
@@ -66,4 +63,32 @@ jobs:
         run: ctest -C ${{ matrix.build_type }} --output-on-failure
 
       - name: Install
-        run: cmake --install ${{github.workspace}}/build --prefix install
+        run: |
+          cmake --install ${{github.workspace}}/build --prefix install
+      - name: CMake Action
+        # You may pin to the exact commit or the version.
+        # uses: threeal/cmake-action@725d1314ccf9ea922805d7e3f9d9bcbca892b406
+        uses: threeal/cmake-action@v2.1.0
+        with:
+          # The source directory of the CMake project
+          source-dir: 
+    # The build directory of the CMake project
+          build-dir: build
+    # The build system generator for the CMake project
+          generator: 
+    # The preferred executable for compiling C language files
+          c-compiler: gcc
+    # The preferred executable for compiling C++ language files
+          cxx-compiler: g++
+    # Additional flags to pass when compiling C language files
+          c-flags: -O3 -g0 -flto
+    # Additional flags to pass when compiling C++ language files
+          cxx-flags: -O3 -g0 -flto -std=c++23
+    # Additional options to pass during the CMake configuration
+          options: # optional
+    # Additional arguments to pass during the CMake configuration
+          args: # optional
+    # If enabled, builds the project using CMake
+          run-build: # optional, default is true
+    # Additional arguments to pass during the CMake build
+          build-args: # optional

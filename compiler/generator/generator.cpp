@@ -7,7 +7,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
-#include <vmcall.hpp>
+#include <print>
 
 #include "emit.hpp"
 #include "../../include/opcode.hpp"
@@ -71,7 +71,6 @@ size_t Generator::gen(std::shared_ptr<ASTNode> &n) {
         case BlockStmt: return gen_block(n);
         case IfStmt: return gen_if(n);
         case FuncDecl: return gen_function(n);
-        case VMCall: return gen_vmc(n);
         default: return 0ULL;
     }
 }
@@ -184,17 +183,6 @@ size_t Generator::gen_var_ref(std::shared_ptr<ASTNode>& n) {
     expr_release = false;
     return expr_ret_reg;
 }
-size_t Generator::gen_vmc(std::shared_ptr<ASTNode>& n) {
-    const auto node = std::static_pointer_cast<VMCallNode>(std::move(n));
-    const auto idx = std::stoi(node->idx);
-    if (idx > VMCALL_INDEX_MAX || idx < 0) {
-        error("Invalid VMCall index: " + std::to_string(idx) );
-        return -1;
-    }
-    basic_gen_pass_args(node->args, node->args.size(), 0);
-    LMXOpcodeEmitter::emit_vmc(ops, idx);
-    return -1;
-}
 
 size_t Generator::gen_return(std::shared_ptr<ASTNode> &n) {
     const auto node = std::static_pointer_cast<ReturnStmtNode>(std::move(n));
@@ -240,18 +228,15 @@ size_t Generator::basic_gen_func_call(std::shared_ptr<ASTNode> &n, const size_t 
             + std::to_string(tar_ac) + " at function calling `" + node->name + "`");
             return -1;
         }
-        basic_gen_pass_args(node->args, args_count, args_idx);
+        for (size_t i = args_idx; i < args_count ; i++) {
+            const auto expr_ret = gen(node->args[i]);
+
+            LMXOpcodeEmitter::emit_mov_rr(ops , REG_COUNT_INDEX_MAX - i, expr_ret);
+            if (expr_release) regs.free(expr_ret);
+        }
         LMXOpcodeEmitter::emit_fcall(ops, addr, tar_ac);
     } else error("The function `" + node->name + "` is not defined.");
     return 0;
-}
-void Generator::basic_gen_pass_args(std::vector<std::shared_ptr<ASTNode>> &args, const size_t count, size_t idx = 0) {
-    for (size_t i = idx; i < count ; i++) {
-        const auto expr_ret = gen(args[i]);
-
-        LMXOpcodeEmitter::emit_mov_rr(ops , REG_COUNT_INDEX_MAX - i, expr_ret);
-        if (expr_release) regs.free(expr_ret);
-    }
 }
 
 size_t Generator::gen_unary(std::shared_ptr<ASTNode> &n) {
@@ -279,12 +264,10 @@ size_t Generator::gen_unary(std::shared_ptr<ASTNode> &n) {
 
 size_t Generator::gen_string(std::shared_ptr<ASTNode> &n) {
     const auto node = std::static_pointer_cast<StringNode>(std::move(n));
-    const auto expr_ret_reg = regs.alloc();
     const auto expr_ret = constant_pool.size();
-    constant_pool.insert(constant_pool.end(), node->str.begin(), node->str.end() + 1);
-    LMXOpcodeEmitter::emit_mov_ri(ops, expr_ret_reg, std::bit_cast<int64_t>(expr_ret));
+    constant_pool.insert(constant_pool.end(), node->str.begin(), node->str.end());
     expr_release = false;
-    return expr_ret_reg;
+    return expr_ret;
 }
 
 size_t Generator::gen_bool(std::shared_ptr<ASTNode> &n) {
@@ -306,32 +289,25 @@ size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
     const auto node = std::static_pointer_cast<IfStmtNode>(std::move(n));
     const auto cond = gen(node->condition);
 
-    static size_t counter = 0;
-
-    const size_t the_point = tagging();
+    const auto the = tagging();
     LMXOpcodeEmitter::emit_if_true(ops, cond, 0);
 
-    const size_t els_point = tagging();
+    const auto els = tagging();
     LMXOpcodeEmitter::emit_jmp(ops, 0);
-    auto tmp = tagging();
 
-    memcpy(ops[the_point].operands + 1, &tmp, sizeof(tmp));
+    auto tmp = tagging();
+    memcpy(ops[the].operands + 1, &tmp, sizeof(tmp));
+    static size_t counter = 0;
     new_frame("@if@_" + std::to_string(counter++));
     gen(node->thenBlock);
     free_frame();
-    const auto els = tagging();
-    LMXOpcodeEmitter::emit_jmp(ops, 0);
     tmp = tagging();
-
-    memcpy(ops[els_point].operands, &tmp, sizeof(tmp));
-
+    memcpy(ops[els].operands, &tmp, sizeof(tmp));
     if (node->elseBlock) {
         new_frame("@else@_" + std::to_string(counter++));
         gen(node->elseBlock);
         free_frame();
     }
-    tmp = tagging();
-    memcpy(ops[els].operands, &tmp, sizeof(tmp));
     return -1;
 }
 

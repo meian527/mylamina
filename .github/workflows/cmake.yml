@@ -12,6 +12,9 @@ env:
 jobs:
   build:
     timeout-minutes: 360
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]

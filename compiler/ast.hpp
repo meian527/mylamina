@@ -7,12 +7,14 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "../include/lmx_export.hpp"
 
 // Forward declarations to avoid circular dependencies
 namespace lmx {
-    class Generator;
+struct StringNode;
+class Generator;
     enum class TokenType;
     struct Token;
 }
@@ -30,6 +32,9 @@ enum ASTKind {
     FuncCallExpr,
     Return,
     VMCall,
+    Module,
+    Use,
+    ExternFunc,
 };
 
 struct LMC_API ASTNode {
@@ -40,12 +45,21 @@ struct LMC_API ASTNode {
 };
 
 struct TypeNode {
+    enum class Kind { Il, Co,}; //一般类型和复合类型
     std::string name;
+
+    Kind kind{Kind::Co};
     
-    explicit TypeNode(std::string name) : name(std::move(name)) {}
-    ~TypeNode() = default;
+    explicit TypeNode(std::string name) : name(std::move(name)), kind(Kind::Co) {}
+    virtual ~TypeNode() = default;
     
     TypeNode() = default;
+};
+struct CompositeTypeNode final : TypeNode {
+    std::vector<std::shared_ptr<TypeNode>> others;
+
+    CompositeTypeNode(std::string base, std::vector<std::shared_ptr<TypeNode>> others) :
+        TypeNode(std::move(base)), others(std::move(others)) {}
 };
 
 struct LMC_API ProgramASTNode final : public ASTNode {
@@ -90,10 +104,39 @@ struct IfStmtNode final : public StmtNode {
         elseBlock(std::move(elseBlock)) {}
 
 };
+struct ExternFuncNode final : public ASTNode {
+    std::string name;
 
+
+    std::vector<std::string> args;
+
+    /*
+    * 不搞键值对是因为之前就这么写的，更改成本高
+    */
+    std::vector<std::shared_ptr<TypeNode>> args_type;
+    std::shared_ptr<TypeNode> ret_type;
+
+    std::shared_ptr<StringNode> extern_label;
+
+    explicit ExternFuncNode(
+        std::string name,
+        std::vector<std::string> args,
+        std::vector<std::shared_ptr<TypeNode>> args_type,
+        std::shared_ptr<StringNode> extern_label,
+        std::shared_ptr<TypeNode> ret_type)
+
+           :ASTNode(ExternFunc),
+            name(std::move(name)),
+            args(std::move(args)),
+            args_type(std::move(args_type)),
+            ret_type(std::move(ret_type)),
+            extern_label(std::move(extern_label)) {}
+};
 struct FuncDeclNode final : public ASTNode {
     std::string name;
     std::vector<std::string> args;
+    std::vector<std::shared_ptr<TypeNode>> args_type;
+    std::shared_ptr<TypeNode> ret_type;
     std::shared_ptr<ASTNode> body;
     
     explicit FuncDeclNode(
@@ -198,14 +241,47 @@ struct UnaryNode final : public ExprNode {
           operand(std::move(operand)) {}
 };
 
-struct VMCallNode final : public StmtNode {
+struct VMCallNode final : public ExprNode {
 
     std::string idx;
     std::vector<std::shared_ptr<ASTNode>> args;
 
     explicit VMCallNode(std::string idx, std::vector<std::shared_ptr<ASTNode>> args) :
-        StmtNode(VMCall) ,idx(std::move(idx)), args(std::move(args)) {}
+        ExprNode(VMCall) ,idx(std::move(idx)), args(std::move(args)) {}
 
+};
+
+struct ModuleNode final : public StmtNode {
+    std::string name;
+    enum class Types { ord, dyn };
+    Types type;
+    std::shared_ptr<StringNode> lib;    //可能为空
+    std::vector<std::shared_ptr<VarDeclNode>> vars;     // 变量定义
+    std::vector<std::shared_ptr<FuncDeclNode>> ord;     // 一般函数定义
+    std::vector<std::shared_ptr<ExternFuncNode>> dyn;     // 动态函数定义
+    std::vector<std::shared_ptr<ModuleNode>> chd;     // 子模块
+
+    explicit ModuleNode(
+        std::string name,
+        Types type,
+        std::shared_ptr<StringNode> lib,
+        std::vector<std::shared_ptr<VarDeclNode>> vars,
+        std::vector<std::shared_ptr<FuncDeclNode>> ord,
+        std::vector<std::shared_ptr<ExternFuncNode>> dyn,
+        std::vector<std::shared_ptr<ModuleNode>>   chd) :
+            StmtNode(Module),
+            name(std::move(name)),
+    type(type),
+    lib(std::move(lib)),
+    vars(std::move(vars)),
+    ord(std::move(ord)),
+    dyn(std::move(dyn)),
+    chd(std::move(chd)) {}
+};
+struct UseNode final : public StmtNode {
+    std::shared_ptr<StringNode> path;
+
+    explicit UseNode(std::shared_ptr<StringNode> path) : StmtNode(Use), path(std::move(path)) {}
 };
 
 } // namespace lmx

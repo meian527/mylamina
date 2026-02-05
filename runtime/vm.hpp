@@ -2,34 +2,40 @@
 // Created by geguj on 2025/12/27.
 //
 #pragma once
-#include <array>
-#include <cstdint>
-#include <memory>
-#include <utility>
-#include <vector>
 #include "lmx_export.hpp"
 #include "value/value.hpp"
 #include "opcode.hpp"
 #include "frame/frame.hpp"
+#include "../compiler/common.hpp"
+
+#include <array>
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+#include "libloader.hpp"
 
 namespace lmx::runtime {
 
 struct LMVM_API LMXState {
     size_t pc{0};
-    std::array<Value, 255> regs{};
+    std::array<Value, REG_COUNT> regs{};
 
     std::vector<size_t> ret_addr_stack;
     //void* const_pool_top;
-    std::vector<Op>* program;
+    std::vector<Op>* program{};
 
-    std::unique_ptr<StackFrame> cur;
+    std::vector<std::unique_ptr<StackFrame>> cur;
+    LMXState() = default;
 };
 class LMVM_API VirtualCore {
     void* const_pool_top;
     LMXState ste;
 
-    [[nodiscard]] Value *get_value_from_pool(const size_t offest) const;
+
+    [[nodiscard]] Value *get_value_from_pool(size_t offest) const;
 public:
+    std::vector<std::unique_ptr<DynLib>> libs;
     VirtualCore();
     VirtualCore(const VirtualCore&) = delete;
     VirtualCore& operator=(const VirtualCore&) = delete;
@@ -46,6 +52,8 @@ public:
 
     [[nodiscard]] void* get_constant() const { return const_pool_top; }
     void set_constant(void* const_pool) { const_pool_top = const_pool; }
+
+    void set_reg_ptr(const size_t idx, void* np) { ste.regs[idx].ptr = np; }
 };
 
 }

@@ -28,9 +28,7 @@ enum class Opcode {
     IF_TRUE,
     IF_FALSE,
     FUNC_CREATE, FUNC_END,
-    LOCAL_GET_INT, LOCAL_SET_INT,
-    LOCAL_GET_FLOAT, LOCAL_SET_FLOAT,
-    LOCAL_GET_BOOL, LOCAL_SET_BOOL,
+    LOCAL_GET, LOCAL_SET,
 
     AND, OR,
     VMC,  // vmcall

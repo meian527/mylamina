@@ -24,6 +24,9 @@ enum class /*LMC_API*/ TokenType {
     KW_FUNC, KW_RETURN,
     UNKNOWN, KW_IF, KW_ELSE, KW_LET,
     KW_VMC,
+    KW_MODULE,
+    KW_USE,
+    DOT,
 };
 
 struct LMC_API Token {

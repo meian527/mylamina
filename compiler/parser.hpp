@@ -13,6 +13,7 @@
 namespace lmx {
 
 class LMC_API Parser {
+    bool in_module{false};
     bool has_err{false};
     std::vector<Token>& tokens;
     size_t pos{0};
@@ -39,7 +40,7 @@ class LMC_API Parser {
 
     std::shared_ptr<BlockStmtNode> parse_block();
 
-    std::shared_ptr<ExprNode> parse_string();
+    std::shared_ptr<StringNode> parse_string();
 
     std::shared_ptr<ASTNode> parse_if();
     std::shared_ptr<ExprNode> parse_expr();
@@ -50,12 +51,16 @@ class LMC_API Parser {
 
     std::shared_ptr<ExprNode> parse_logical_or();
 
-    std::shared_ptr<ASTNode> parse_funcdecl();
+    std::shared_ptr<ASTNode> parse_funcdecl(bool has_block);
 
 public:
     explicit Parser(std::vector<Token>& tokens): tokens(tokens) {}
 
     std::shared_ptr<ASTNode> parse();
+
+    std::shared_ptr<ASTNode> parse_module();
+
+    std::shared_ptr<TypeNode> parse_type();
 
 
     std::shared_ptr<ProgramASTNode> parse_program();

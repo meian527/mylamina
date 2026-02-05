@@ -16,7 +16,8 @@ VirtualCore::VirtualCore() : const_pool_top(nullptr), ste() {
     static std::vector<Op> program;
     ste.program = &program;
     ste.pc = 0;
-    ste.cur = std::make_unique<StackFrame>(nullptr);
+    ste.cur.push_back(std::make_unique<StackFrame>());
+    ste.cur.back()->locals.resize(64);
 }
 
 VirtualCore::VirtualCore(LMXState ste) : const_pool_top(nullptr), ste(std::move(ste)) {}
@@ -52,7 +53,7 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case MOV_RC: {
-        ste.regs[operands[0]] = get_value_from_pool(*reinterpret_cast<const uint64_t*>(operands + 1));
+        ste.regs[operands[0]].str = (char*)get_constant() + *(uint64_t*)(operands + 1);
         ste.pc++;
         goto RUN_CONTINUE;
     }
@@ -111,16 +112,15 @@ int VirtualCore::run() {
         ste.ret_addr_stack.push_back(ste.pc + 1); // 返回地址
         ste.pc = *reinterpret_cast<const uint64_t*>(operands); // 跳转地址
         const auto args_count = operands[8]; // 传参数量
-        ste.cur = std::make_unique<StackFrame>(std::move(ste.cur)); //新建栈帧
-        ste.cur->locals.resize(args_count + 1);
-        for (uint8_t i = 0; i != args_count; i++) ste.cur->locals[i] = ste.regs[REG_COUNT_INDEX_MAX - i];
+        ste.cur.push_back(std::make_unique<StackFrame>()); //新建栈帧
+        ste.cur.back()->locals.resize(args_count + 1);
+        for (uint8_t i = 0; i != args_count; i++) ste.cur.back()->locals[i] = ste.regs[REG_COUNT_INDEX_MAX - i];
         goto RUN_CONTINUE;
     }
     case FRET: {
         ste.pc = ste.ret_addr_stack.back(); //返回地址
         ste.ret_addr_stack.pop_back();
-        ste.cur = std::move(ste.cur->last); //  恢复栈帧
-        if (!ste.cur) return 0; // 如果上一个为nullptr即到顶，退出全局
+        ste.cur.pop_back(); //  恢复栈帧
         goto RUN_CONTINUE;
     }
     case HALT: {
@@ -184,33 +184,13 @@ int VirtualCore::run() {
         ste.pc++;
         goto RUN_CONTINUE;
     }
-    case LOCAL_GET_INT: {
-        ste.regs[operands[0]].i64 = ste.cur->locals[*(uint16_t*)(operands + 1)].i64;
+    case LOCAL_GET: {
+        ste.regs[operands[0]] = ste.cur[operands[1]]->locals[*(uint16_t*)(operands + 2)];
         ste.pc++;
         goto RUN_CONTINUE;
     }
-    case LOCAL_SET_INT: {
-        ste.cur->new_var(*(uint16_t*)operands, ste.regs[operands[2]]);
-        ste.pc++;
-        goto RUN_CONTINUE;
-    }
-    case LOCAL_GET_FLOAT: {
-        ste.regs[operands[0]].f64 = ste.cur->locals[*(uint16_t*)(operands + 1)].f64;
-        ste.pc++;
-        goto RUN_CONTINUE;
-    }
-    case LOCAL_SET_FLOAT: {
-        ste.cur->locals[*(uint16_t*)(operands)].f64 = ste.regs[operands[2]].f64;
-        ste.pc++;
-        goto RUN_CONTINUE;
-    }
-    case LOCAL_GET_BOOL: {
-        ste.regs[operands[0]].b = ste.cur->locals[*(uint16_t*)(operands + 1)].b;
-        ste.pc++;
-        goto RUN_CONTINUE;
-    }
-    case LOCAL_SET_BOOL: {
-        ste.cur->locals[*(uint16_t*)(operands)].b = ste.regs[operands[2]].b;
+    case LOCAL_SET: {
+        ste.cur[operands[0]]->locals[*(uint16_t*)(operands + 1)] = ste.regs[operands[3]];
         ste.pc++;
         goto RUN_CONTINUE;
     }

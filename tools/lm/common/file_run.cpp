@@ -24,6 +24,8 @@ int file_run(const std::string& file_name) {
     gener.gen(node);
     if (lmx::node_has_error)return -1;
     gener.ops.emplace_back(lmx::runtime::Opcode::HALT);
+    gener.print_ops();
+    //return 0;
     lmx::runtime::VirtualCore vm;
     vm.set_program(&gener.ops);
     vm.set_constant(gener.constant_pool.data());

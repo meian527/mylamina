@@ -4,6 +4,7 @@
 
 #include "parser.hpp"
 
+#include <format>
 #include <stack>
 
 #include "../include/opcode.hpp"
@@ -42,7 +43,10 @@ void Parser::advance() {
         if (cur().type == TokenType::UNKNOWN) error("unknown token: `" + cur().text + "`");
     }
 }
-
+#define check_type(op) if (match(TokenType::COLON)) { \
+advance();\
+op(parse_type());\
+}
 Token& Parser::cur() const {
     if (pos >= tokens.size()) {
         return tokens.back();
@@ -83,6 +87,7 @@ std::shared_ptr<BlockStmtNode> Parser::parse_block() {
 }
 std::shared_ptr<ExprNode> Parser::parse_expr() {
     std::shared_ptr<ExprNode> node = parse_logical_and();
+    std::shared_ptr<TypeNode> type;
     while (match(TokenType::PIPE) ) {
         auto op = cur().text;
         advance();
@@ -92,6 +97,7 @@ std::shared_ptr<ExprNode> Parser::parse_expr() {
         }
         node = std::make_shared<BinaryNode>(node, n2, op);
     }
+    check_type(type =);
     return node;
 }
 std::shared_ptr<ExprNode> Parser::parse_logical_and() {
@@ -154,52 +160,28 @@ std::shared_ptr<ASTNode> Parser::parse() {
         advance();
         if (!match(TokenType::ASSIGN)) error("expected assignment");
         advance();
-        node = std::make_shared<VarDeclNode>(name, expr(), false);
+        node = std::make_shared<VarDeclNode>(name, parse_expr(), false);
         break;
     }
     case TokenType::KW_FUNC: {
         advance();
         in_func = true;
-        if (!match(TokenType::IDENTIFIER)) {
-            advance();
-            error("expected identifier");
-            break;
-        }
-        auto name = cur().text;
-        advance();
-        if (!match(TokenType::LPAREN)) {
-            advance();
-            error("expected '('");
-            break;
-        }
-        advance();
-        std::vector<std::string> params;
-        while (true) {
-            if (match(TokenType::IDENTIFIER)) {
-                params.push_back(cur().text);
-                advance();
-            } else if (match(TokenType::RPAREN)) {
-                advance();
-                break;
-            } else if (match(TokenType::COMMA)) {
-                advance();
-            } else {
-                advance();
-                error("expected identifier, ',' or ')'");
-                break;
-            }
-        }
-        node = std::make_shared<FuncDeclNode>(name, params, parse_block());
+        node = parse_funcdecl(true);
         in_func = false;
         break;
     }
     case TokenType::KW_RETURN: {
+        auto line = cur().line;
         advance();
-        auto e = parse_expr();
-        if (!in_func) {
-            error("expected 'return'");
+        if (cur().line > line) {
+            node = std::make_shared<ReturnStmtNode>(nullptr);
+        } else {
+            auto e = parse_expr();
+            if (!in_func) {
+                error("expected 'return'");
+            }
+            node = std::make_shared<ReturnStmtNode>(e);
         }
-        node = std::make_shared<ReturnStmtNode>(e);
         break;
     }
     case TokenType::KW_IF: {
@@ -207,19 +189,14 @@ std::shared_ptr<ASTNode> Parser::parse() {
         node = parse_if();
         break;
     }
-    case TokenType::KW_VMC: {
+    case TokenType::KW_MODULE: {
         advance();
-        if (!match(TokenType::NUM_LITERAL)) {
-            advance();
-            error("expected numeric literal");
-            break;
-        }
-        auto idx = cur().text;
+        node = parse_module();
+        break;
+    }
+    case TokenType::KW_USE: {
         advance();
-        std::vector<std::shared_ptr<ASTNode>> args;
-        parse_args(args);
-
-        node = std::make_shared<VMCallNode>(idx, std::move(args));
+        auto path = parse_string();
         break;
     }
     default: {
@@ -234,29 +211,140 @@ std::shared_ptr<ASTNode> Parser::parse() {
     }
     return node;
 }
-std::shared_ptr<ASTNode> Parser::parse_funcdecl() {
-    if (!match(TokenType::IDENTIFIER)) error("expected identifier");
+std::shared_ptr<ASTNode> Parser::parse_module() {
+    if (!match(TokenType::IDENTIFIER)) {
+        error("expected identifier");
+        return nullptr;
+    }
+
     auto name = cur().text;
+    ModuleNode::Types type = ModuleNode::Types::ord;
+    std::shared_ptr<StringNode> lib = nullptr;
+
     advance();
-    if (!match(TokenType::LPAREN)) error("expected '('");
+    if (match(TokenType::COLON)) {
+        advance();
+        lib = std::make_shared<StringNode>(cur().text);
+        type = ModuleNode::Types::dyn;
+        advance();
+    }
+    in_module = true;
+    if (!match(TokenType::LBRACE)) {
+        error("expected '{'");
+        advance();
+        return nullptr;
+    }
+
     advance();
-    std::vector<std::string> params;
-    while (true) {
-        if (match(TokenType::RPAREN)) break;
-        if (!match(TokenType::IDENTIFIER)) {
-            error("expected identifier");
+
+    std::vector<std::shared_ptr<VarDeclNode>> vars;
+    std::vector<std::shared_ptr<FuncDeclNode>> ord;
+    std::vector<std::shared_ptr<ExternFuncNode>> dyn;
+    std::vector<std::shared_ptr<ModuleNode>>   chd;
+
+    while (!match(TokenType::RBRACE)) {
+        auto node = parse();
+        switch (node->kind) {
+        case VarDecl: vars.push_back(static_pointer_cast<VarDeclNode>(node));break;
+        case FuncDecl: ord.push_back(static_pointer_cast<FuncDeclNode>(node));break;
+        case ExternFunc: dyn.push_back(static_pointer_cast<ExternFuncNode>(node));break;
+        case Module: chd.push_back(static_pointer_cast<ModuleNode>(node));break;
+        default: {
+            error("in module only decl `var, func`");
             return nullptr;
         }
-        params.push_back(cur().text);
-        advance();
-        if (match(TokenType::RPAREN)) break;
-        if (!match(TokenType::COMMA)) {
-            error("expected ','");
-            return nullptr;
         }
     }
     advance();
-    return std::make_shared<FuncDeclNode>(name, params, parse_block());
+    in_module = false;
+
+    return std::make_shared<ModuleNode>(name, type, lib, vars, ord, dyn, chd);
+}
+
+std::shared_ptr<TypeNode> Parser::parse_type() {
+    if (!match(TokenType::IDENTIFIER)) {
+        error("expected identifier");
+        return nullptr;
+    }
+    auto basic = cur().text;
+    advance();
+    if (match(TokenType::LBRACK)) {
+        advance();
+        std::vector<std::shared_ptr<TypeNode>> others;
+        while (true) {
+            others.push_back(parse_type());
+            if (match(TokenType::RBRACK)) break;
+            if (match(TokenType::COMMA)) {
+                advance();
+            } else {
+                error("expected ','");
+                advance();
+                return nullptr;
+            }
+        }
+        advance();
+        return std::make_shared<CompositeTypeNode>(basic, others);
+    }
+    return std::make_shared<TypeNode>(basic);
+}
+
+std::shared_ptr<ASTNode> Parser::parse_funcdecl(const bool has_block = true) {
+    if (!match(TokenType::IDENTIFIER)) {
+        advance();
+        error("expected identifier");
+        return nullptr;
+    }
+    auto name = cur().text;
+    advance();
+    if (!match(TokenType::LPAREN)) {
+        advance();
+        error("expected '('");
+        return nullptr;
+    }
+    advance();
+    std::vector<std::string> params;
+    std::vector<std::shared_ptr<TypeNode>> args_type;
+    std::shared_ptr<TypeNode> ret_type = nullptr;
+    while (true) {
+        if (match(TokenType::IDENTIFIER)) {
+            params.push_back(cur().text);
+            advance();
+            check_type(args_type.push_back)
+        } else if (match(TokenType::RPAREN)) {
+            advance();
+            break;
+        } else if (match(TokenType::COMMA)) {
+            advance();
+        } else {
+            advance();
+            error("expected identifier, ',' or ')'");
+            break;
+        }
+    }
+    check_type(ret_type =)
+    if (match(TokenType::LBRACE)) {    // 一般 定义情况
+        auto node = std::make_shared<FuncDeclNode>(name, params, parse_block());
+        node->args_type = std::move(args_type);
+        node->ret_type = std::move(ret_type);
+        return node;
+    } else if (match(TokenType::ASSIGN)) {  // 外部导入情况
+        advance();
+        if (!match(TokenType::STRING_LITERAL)) {
+            error("expected string literal");
+            advance();
+            return nullptr;
+        }
+        auto node = std::make_shared<ExternFuncNode>(name, params, args_type, parse_string(), ret_type);
+        check_type(ret_type =)
+        node->args_type = std::move(args_type);
+        node->ret_type = std::move(ret_type);
+        return node;
+    } else {    // 仅声明情况
+        auto node = std::make_shared<FuncDeclNode>(name, params, nullptr);
+        node->args_type = std::move(args_type);
+        node->ret_type = std::move(ret_type);
+        return node;
+    }
 }
 
 std::shared_ptr<ExprNode> Parser::expr() {
@@ -305,6 +393,14 @@ std::shared_ptr<ExprNode> Parser::factor() {
     } else if (match(TokenType::IDENTIFIER)) {
         auto name = cur().text;
         advance();
+        while (match(TokenType::DOT)) {
+            name += cur().text;
+            advance();
+            if (match(TokenType::IDENTIFIER)) {
+                name += cur().text;
+                advance();
+            }
+        }
         if (!match(TokenType::LPAREN)) {
             fact = make_shared<VarRefNode>(name);
         }
@@ -319,13 +415,36 @@ std::shared_ptr<ExprNode> Parser::factor() {
     } else if (match(TokenType::END_OF_FILE)) {
         advance();
     } else if (match(TokenType::STRING_LITERAL)) {
-        fact = std::make_shared<StringNode>(cur().text);
+        fact = parse_string();
+    } else if (match(TokenType::KW_VMC)) {
         advance();
+        if (!match(TokenType::NUM_LITERAL)) {
+            advance();
+            error("expected numeric literal");
+            return nullptr;
+        }
+        auto idx = cur().text;
+        advance();
+        std::vector<std::shared_ptr<ASTNode>> args;
+        parse_args(args);
+
+        fact = std::make_shared<VMCallNode>(idx, std::move(args));
     }
     else {
         error("unknown token: `" + cur().text + "`");
         advance();
     }
+    return fact;
+}
+
+std::shared_ptr<StringNode> Parser::parse_string() {
+    if (!match(TokenType::STRING_LITERAL)) {
+        error("expected string literal");
+        advance();
+        return nullptr;
+    }
+    auto fact = std::make_shared<StringNode>(cur().text);
+    advance();
     return fact;
 }
 

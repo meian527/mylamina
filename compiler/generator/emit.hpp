@@ -63,13 +63,10 @@ public:
 
     static void emit_func_create(std::vector<lmx::runtime::Op> &ops);
     static void emit_func_end(std::vector<lmx::runtime::Op> &ops);
-    
-    static void emit_local_get_int(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint16_t idx);
-    static void emit_local_set_int(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r);
-    static void emit_local_get_float(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx);
-    static void emit_local_set_float(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r);
-    static void emit_local_get_bool(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx);
-    static void emit_local_set_bool(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r);
+
+    static void emit_local_get(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint8_t s, uint16_t idx);
+
+    static void emit_local_set(std::vector<lmx::runtime::Op> &ops, uint8_t s, uint16_t idx, uint8_t r2);
 
     static void emit_and(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint8_t r2, uint8_t r3);
 

@@ -203,53 +203,21 @@ if (const auto& last = ops.back();\
 #else
 #define getter_opt_code
 #endif
-void LMXOpcodeEmitter::emit_local_get_int(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint16_t idx) {
+void LMXOpcodeEmitter::emit_local_get(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint8_t s, uint16_t idx) {
     getter_opt_code
-    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET_INT);
-    op.operands[0] = r;
-    write_imm(op.operands + 1, idx);
+    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET);
+    op.operands[0] = r1;
+    op.operands[1] = s;
+    write_imm(op.operands + 2, idx);
     ops.push_back(op);
     ret_type = Reg;
 }
 
-void LMXOpcodeEmitter::emit_local_set_int(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r) {
-    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET_INT);
-    write_imm(op.operands, idx);
-    op.operands[2] = r;
-    ops.push_back(op);
-    ret_type = Addr;
-}
-
-void LMXOpcodeEmitter::emit_local_get_float(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
-    getter_opt_code
-    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET_FLOAT);
-    op.operands[0] = r;
+void LMXOpcodeEmitter::emit_local_set(std::vector<lmx::runtime::Op> &ops, uint8_t s, uint16_t idx, uint8_t r2) {
+    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET);
+    op.operands[0] = s;
     write_imm(op.operands + 1, idx);
-    ops.push_back(op);
-    ret_type = Reg;
-}
-
-void LMXOpcodeEmitter::emit_local_set_float(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r) {
-    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET_FLOAT);
-    write_imm(op.operands, idx);
-    op.operands[2] = r;
-    ops.push_back(op);
-    ret_type = Addr;
-}
-
-void LMXOpcodeEmitter::emit_local_get_bool(std::vector<lmx::runtime::Op> &ops, uint8_t r, uint8_t idx) {
-    getter_opt_code
-    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_GET_BOOL);
-    op.operands[0] = r;
-    write_imm(op.operands + 1, idx);
-    ops.push_back(op);
-    ret_type = Reg;
-}
-
-void LMXOpcodeEmitter::emit_local_set_bool(std::vector<lmx::runtime::Op> &ops, uint16_t idx, uint8_t r) {
-    lmx::runtime::Op op(lmx::runtime::Opcode::LOCAL_SET_BOOL);
-    write_imm(op.operands, idx);
-    op.operands[2] = r;
+    op.operands[3] = r2;
     ops.push_back(op);
     ret_type = Addr;
 }
@@ -276,6 +244,14 @@ void LMXOpcodeEmitter::emit_vmc(std::vector<lmx::runtime::Op> &ops, uint16_t idx
     ops.push_back(op);
     ret_type = None;
 }
+
+void LMXOpcodeEmitter::emit_mov_rc(std::vector<lmx::runtime::Op> &ops, uint8_t r1, uint64_t idx) {
+    runtime::Op op(runtime::Opcode::MOV_RC);
+    op.operands[0] = r1;
+    write_imm(op.operands + 1, std::bit_cast<int64_t>(idx));
+    ops.push_back(op);
+}
+
 #undef getter_opt_code
 } // namespace lmx
 

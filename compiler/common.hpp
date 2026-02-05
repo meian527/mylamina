@@ -5,34 +5,37 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <filesystem>
+
+#include "ast.hpp"
+#include "lexer.hpp"
+#include <fstream>
+#include <iostream>
+
+#include "parser.hpp"
 
 namespace lmx {
-    // Forward declarations to avoid circular dependencies
     class Generator;
-    
-    // TokenType enum definition
-    LMC_API enum TokenType {
-        END_OF_FILE,
-        OPER_PLUS, OPER_MINUS, OPER_MUL, OPER_DIV, OPER_MOD, OPER_POW,
+#define REG_COUNT 255
+#define REG_COUNT_INDEX_MAX 254
+    inline std::vector<std::filesystem::path> module_path;
 
-        ASSIGN, COLON, COL_COLON, COMMA, NOT,
+    inline std::string read_file(const std::string& path) {
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            std::cerr << "Failed to open file " << path << std::endl;
+            return {};
+        }
+        return std::string(std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{});
+    }
+    inline std::shared_ptr<ASTNode> compile(const std::string &path) {
+        std::string code = read_file(path);
+        if (code.empty())  return nullptr;
+        Lexer lexer(code);
+        auto tks = lexer.tokenize(code);
 
-        LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE,
-
-        EQ, NE, LT, GT, LE, GE,
-
-        NUM_LITERAL, STRING_LITERAL, TRUE_LITERAL, FALSE_LITERAL, IDENTIFIER,
-
-        KW_FUNC, KW_RETURN,
-        UNKNOWN, KW_IF, KW_ELSE, KW_LET
-    };
-    
-    // Token struct definition
-    struct LMC_API Token {
-        TokenType type;
-        std::string text;
-        size_t line, col;
-
-        LMC_API friend std::ostream& operator<<(std::ostream& os, const Token& t);
-    };
+        Parser parser(tks);
+        if (auto node = parser.parse_program(); node && !parser.error()) return node;
+        return nullptr;
+    }
 }

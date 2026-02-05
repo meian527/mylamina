@@ -209,6 +209,10 @@ Token Lexer::next() {
             }
             return {TokenType::UNKNOWN, std::string(1, src[pos]), line, col};
         }
+        case '.': {
+            advance();
+            return {TokenType::DOT, ".", line, col};
+        }
         default: {
             if (isdigit(src[pos])) {
                 std::string num;
@@ -235,6 +239,8 @@ Token Lexer::next() {
                     {"else", TokenType::KW_ELSE},
                     {"let", TokenType::KW_LET},
                     {"__VMC", TokenType::KW_VMC},
+                    {"module", TokenType::KW_MODULE},
+                    {"use", TokenType::KW_USE},
                 };
                 if (const auto it = keywords.find(id); it != keywords.end()) {
                     return {it->second, id, line, col - id.size()};

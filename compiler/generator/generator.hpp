@@ -11,19 +11,21 @@
 #include <vector>
 #include <memory>
 #include <ranges>
+#include <sstream>
 
 #include "../ast.hpp"
 
-#include "../../include/lmx_export.hpp"
-#include "../../include/opcode.hpp"
+#include "lmx_export.hpp"
+#include "opcode.hpp"
+#include "../common.hpp"
+#include "../../runtime/libloader.hpp"
 
 namespace lmx {
 
 namespace runtime {
 struct Op;
 }
-#define REG_COUNT 255
-#define REG_COUNT_INDEX_MAX 254
+
 class LMC_API Allocator {
     std::bitset<REG_COUNT> bitset;
 public:
@@ -70,9 +72,13 @@ class LMC_API Generator {
 
     size_t gen_block(std::shared_ptr<ASTNode>& n);
 
-    auto tagging() const { return ops.size(); }
-    void new_frame(const std::string& name) { cur = std::make_unique<CompilingFrame>(name, std::move(cur));}
-    void free_frame() { cur = std::move(cur->last); }
+    size_t gen_module(std::shared_ptr<ASTNode> &shared);
+
+    size_t gen_use(std::shared_ptr<ASTNode> &shared);
+
+    [[nodiscard]] auto tagging() const { return ops.size(); }
+    void new_frame(const std::string& name) { cur.push_back(std::make_unique<CompilingFrame>(name));}
+    void free_frame() { cur.pop_back(); }
     size_t gen_if(std::shared_ptr<ASTNode>& n);
 
     static void error(const std::string& msg) {
@@ -81,57 +87,50 @@ class LMC_API Generator {
     }
 
     struct CompilingFrame {
-        std::unique_ptr<CompilingFrame> last{nullptr};
         std::string name{"global"};
         std::unordered_map<std::string, std::pair<bool, uint16_t>> locals; // name <mutable, here>
 
         uint16_t local_count{static_cast<uint16_t>(-1)};
 
-        explicit CompilingFrame(std::string name, std::unique_ptr<CompilingFrame>&& last): name(std::move(name)), last(std::move(last))  {}
+        explicit CompilingFrame(std::string name): name(std::move(name))  {}
 
         CompilingFrame() = default;
 
-        /* ====================================== *
-         * function find(name)
+
+
+        uint16_t new_var(const std::string& n, bool is_mut, uint16_t addr) {
+            if (!locals.contains(n)) {
+                if (addr > local_count) {
+                    locals.reserve(addr + 1);
+                    local_count = addr;
+                }
+                locals[n] = std::make_pair(is_mut, addr);
+            } else error("redefined var: `" + n + "`");
+            return local_count;
+        }
+        uint16_t new_var(const std::string& n, bool is_mut) {
+            return new_var(n, is_mut, ++local_count);
+        }
+    };
+    std::vector<std::unique_ptr<CompilingFrame>> cur;
+    /* ====================================== *
+         * function find_var(name)
          * find the var named `name` up to frames
          *
          * @return
          * 一般情况： （frame*, (mutable, idx))
          * 未找到情况： （nullptr, (false, UINT16_MAX))
          * ======================================= */
-        auto find(const std::string& nme) -> std::pair<CompilingFrame*, std::pair<bool, uint16_t>> {
-            auto c = this;
-            while (c) {
-                // 在当前帧中查找
-                for (const auto& [k, v] : c->locals)
-                    if (k == nme)
-                        return {c, v};
-                // 跳转到上一帧
-                if (c->last) {
-                    c = c->last.get();
-                } else {
-                    c = nullptr;
-                }
-            }
-            // 未找到
-            return {nullptr, {false,UINT16_MAX}};
+    auto find_var(const std::string& nme) const -> std::pair<size_t, std::pair<bool, uint16_t>> {
+        size_t i = 0;
+        for (const auto& c : cur) {
+            for (const auto& [n, l] : c->locals)
+                if (nme == n) return {i, l};
+            i++;
         }
-
-        uint16_t new_var(const std::string& name, bool is_mut, uint16_t addr) {
-            if (!locals.contains(name)) {
-                if (addr > local_count) {
-                    locals.reserve(addr + 1);
-                    local_count = addr;
-                }
-                locals[name] = std::make_pair(is_mut, addr);
-            } else error("redefined var: `" + name + "`");
-            return local_count;
-        }
-        uint16_t new_var(const std::string& name, bool is_mut) {
-            return new_var(name, is_mut, ++local_count);
-        }
-    };
-    std::unique_ptr<CompilingFrame> cur;
+        // 未找到
+        return {SIZE_MAX, {false,UINT16_MAX}};
+    }
     std::unordered_map<std::string, std::pair<uint8_t, size_t>> funcs;
     void new_func(const std::string & name, uint8_t size) {
         if (!funcs.contains(name)) {
@@ -139,25 +138,43 @@ class LMC_API Generator {
         } else error("redefined function: `" + name + "`");
     }
     void new_func(const std::string & name, uint8_t size, size_t addr) {
-        if (funcs.find(name) == funcs.end()) {
+        if (!funcs.contains(name)) {
             funcs[name] = std::make_pair(size, addr);
         } else error("redefined function: `" + name + "`");
     }
     bool find_func(const std::string & name) const {
         return funcs.contains(name);
     }
+
+    /*
+     * extern funcs
+     * name : args_type
+     */
+    std::unordered_map<
+        std::string,
+        std::pair<size_t,
+            std::vector<    std::shared_ptr<TypeNode>   >
+        >> extern_funcs;
+    static inline runtime::CBasicTypes lmtype2ctype(std::string& lmt) {
+        if (lmt.empty()) return runtime::Void;
+        if (lmt == "bool") return runtime::CBasicTypes::Bool;
+        if (lmt == "num") return runtime::CBasicTypes::LongLong;
+        if (lmt == "text") return runtime::CBasicTypes::Ptr;
+        return runtime::CBasicTypes::NO_ENUM_VALUE;
+    }
+    std::vector<std::string> modules;
+    std::stringstream cur_module;
+    std::vector<std::string> using_modules;
 public:
     Allocator regs;
-    Generator() : cur(std::make_unique<CompilingFrame>()){}
+    Generator() { cur.push_back(std::make_unique<CompilingFrame>("global")); }
     ~Generator() = default;
 
     std::vector<runtime::Op> ops;
     void write(runtime::Op& op);
 
-
     std::vector<runtime::Op> get_ops();
     std::vector<char> constant_pool;
-
 
     size_t gen(std::shared_ptr<ASTNode> &n);
 
@@ -166,9 +183,9 @@ public:
     void print_ops();
 
     void print_vars() {
-        for (auto& v: cur->locals) {
-            std::cout << v.first << " at address: " << v.second.second << " mutable: " << (v.second.first ? "true" : "false") << std::endl;
-        }
+        for (auto& v: cur)
+            for (auto& [n, a] : v->locals)
+                std::cout << n << " at address: " << a.second << " mutable: " << (a.first ? "true" : "false") << std::endl;
     }
 };
 

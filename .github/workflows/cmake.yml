@@ -84,10 +84,3 @@ jobs:
           c-flags: -O3 -g0 -flto
     # Additional flags to pass when compiling C++ language files
           cxx-flags: -O3 -g0 -flto -std=c++23
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with: 
-          name: lmx-release
-          path: |
-            build/bin
-            build/lib

@@ -1,7 +1,7 @@
 #include "libloader.hpp"
 #include "../compiler/generator/generator.hpp"
 #include <iostream>
-#include "dyncall-1.4/dyncall/dyncall.h"
+#include "dyncall/dyncall.h"
 #include <string>
 #include "../runtime/vm.hpp"
 

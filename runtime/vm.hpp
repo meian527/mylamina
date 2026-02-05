@@ -27,6 +27,16 @@ struct LMVM_API LMXState {
 
     std::vector<std::unique_ptr<StackFrame>> cur;
     LMXState() = default;
+    // 2. 删除拷贝构造函数和拷贝赋值运算符
+    LMXState(const LMXState&) = delete;
+    LMXState& operator=(const LMXState&) = delete;
+
+    // 3. 允许移动构造函数和移动赋值运算符
+    LMXState(LMXState&&) = default;
+    LMXState& operator=(LMXState&&) = default;
+
+    // 4. 析构函数
+    ~LMXState() = default;
 };
 class LMVM_API VirtualCore {
     void* const_pool_top;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 4.0)
 project(LMX)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -21,4 +21,3 @@ add_subdirectory(compiler)
 add_subdirectory(runtime)
 
 add_subdirectory(tools/lm)
-

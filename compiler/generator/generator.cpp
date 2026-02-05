@@ -149,8 +149,7 @@ size_t Generator::gen_module(std::shared_ptr<ASTNode> &shared) {
         constant_pool.push_back(lmtype2ctype(df->ret_type->name));
         LMXOpcodeEmitter::emit_mov_rc(ops, REG_COUNT_INDEX_MAX - 4, ret_type_ti);
 
-        LMXOpcodeEmitter::emit_vmc(ops, 4);\
-        std::cout << tmp + '.' + df->name << std::endl;
+        LMXOpcodeEmitter::emit_vmc(ops, 4);
         extern_funcs[tmp + '.' + df->name] = {f_name_ti, df->args_type};
     }
 

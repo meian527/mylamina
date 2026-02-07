@@ -16,7 +16,7 @@ message(STATUS "downloading dyncall...")
 FetchContent_Declare(
         dyncall
         GIT_REPOSITORY https://github.com/ugexe/dyncall.git
-        GIT_TAG        default
+        GIT_TAG        "r1.4"
         OVERRIDE_FIND_PACKAGE
         # 禁用更新检查
         UPDATE_DISCONNECTED ON

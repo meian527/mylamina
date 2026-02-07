@@ -26,10 +26,6 @@ jobs:
             c_compiler: gcc
             cpp_compiler: g++
             build_type: Release
-          - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
-            build_type: Debug
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
@@ -38,10 +34,6 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
             build_type: Release
-          - os: macos-latest
-            c_compiler: clang
-            cpp_compiler: clang++
-            build_type: Debug
 
     runs-on: ${{ matrix.os }}
 
@@ -49,7 +41,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: recursive  # 如果需要子模块
+          submodules: recursive  
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -62,18 +54,20 @@ jobs:
             libxinerama-dev \
             libxcursor-dev \
             libxi-dev
+            mercurial
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install glfw
+          brew install mercurial
 
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
         run: |
           # 下载GLFW或通过vcpkg安装
           vcpkg install glfw3:x64-windows
+          winget install Mercurial.Mercurial -e
         shell: pwsh
 
       - name: Configure CMake

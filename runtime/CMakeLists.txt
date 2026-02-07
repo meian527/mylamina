@@ -12,9 +12,7 @@ endif()
 include(FetchContent)
 
 
-else ()
-    message(STATUS "downloading dyncall...")
-endif ()
+message(STATUS "downloading dyncall...")
 FetchContent_Declare(
         dyncall
         GIT_REPOSITORY https://github.com/ugexe/dyncall.git

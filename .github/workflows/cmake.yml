@@ -14,7 +14,6 @@ jobs:
     timeout-minutes: 360
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: false
     
     strategy:
       fail-fast: false

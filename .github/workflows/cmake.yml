@@ -69,14 +69,4 @@ jobs:
           name: lm-build-out
           path: build/bin
           retention-days: 7
-    deploy:
-      needs: build
-      steps:
-        - name: Download artifacts
-          uses: actions/download-artifact@v4
-          with:
-            name: my-build-out
-            path: ./downloaded-artifacts
-        - name: Deploy
-          run: ls -la ./downloaded-artifacts
         

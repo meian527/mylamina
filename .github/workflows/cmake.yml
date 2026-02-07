@@ -63,10 +63,11 @@ jobs:
         if: ${{ success() && matrix.build_type == 'Release' }}
         run: |
           cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
-      - name: upload build artifacts windows
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lm-build-${{ matrix.os }}
-          path: build/bin
+          name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
+          path: ${{ github.workspace }}/build/bin
           retention-days: 7
+        if: ${{ success() }}
         

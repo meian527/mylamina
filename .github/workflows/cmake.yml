@@ -12,8 +12,8 @@ env:
 jobs:
   build:
     timeout-minutes: 360
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+    #concurrency:
+     # group: ${{ github.workflow }}-${{ github.ref }}
     
     strategy:
       fail-fast: false

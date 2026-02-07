@@ -53,7 +53,7 @@ jobs:
             libxrandr-dev \
             libxinerama-dev \
             libxcursor-dev \
-            libxi-dev
+            libxi-dev    \
             mercurial
 
       - name: Install macOS dependencies
@@ -65,8 +65,6 @@ jobs:
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
         run: |
-          # 下载GLFW或通过vcpkg安装
-          vcpkg install glfw3:x64-windows
           winget install Mercurial.Mercurial -e
         shell: pwsh
 

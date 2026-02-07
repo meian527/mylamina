@@ -11,19 +11,14 @@ endif()
 # 启用 FetchContent
 include(FetchContent)
 
-find_program(HG_EXECUTABLE hg)
-if (NOT HG_EXECUTABLE)
-    message(FATAL_ERROR
-            "'Mercurial' no installed
-            please go to 'https://www.mercurial-scm.org/' or 'pip install mercurial'(if you installed python)
-")
+
 else ()
     message(STATUS "downloading dyncall...")
 endif ()
 FetchContent_Declare(
         dyncall
-        HG_REPOSITORY https://dyncall.org/pub/dyncall/dyncall
-        HG_TAG        default
+        GIT_REPOSITORY https://github.com/ugexe/dyncall.git
+        GIT_TAG        default
         OVERRIDE_FIND_PACKAGE
         # 禁用更新检查
         UPDATE_DISCONNECTED ON

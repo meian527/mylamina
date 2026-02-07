@@ -151,6 +151,7 @@ std::shared_ptr<ASTNode> Parser::parse_if() {
 }
 std::shared_ptr<ASTNode> Parser::parse() {
     static bool in_func = false;
+    static bool in_loop = false;
     std::shared_ptr<ASTNode> node;
     switch (cur().type) {
     case TokenType::KW_LET: {
@@ -182,6 +183,27 @@ std::shared_ptr<ASTNode> Parser::parse() {
             }
             node = std::make_shared<ReturnStmtNode>(e);
         }
+        break;
+    }
+    case TokenType::KW_LOOP: {
+        advance();
+        auto cond = parse_expr();
+        in_loop = true;
+        auto block = parse_block();
+        node = std::make_shared<LoopNode>(cond, block);
+        in_loop = false;
+        break;
+    }
+    case TokenType::KW_BREAK: {
+        advance();
+        if (!in_loop) error("expected 'break', but not in loop");
+        node = std::make_shared<BreakNode>();
+        break;
+    }
+    case TokenType::KW_CONTINUE: {
+        advance();
+        if (!in_loop) error("expected 'continue', but not in loop");
+        node = std::make_shared<ContinueNode>();
         break;
     }
     case TokenType::KW_IF: {

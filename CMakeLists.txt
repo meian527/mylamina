@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 4.0)
 project(LMX)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 # Add MSVC compatibility support
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /utf-8")
 endif()
 
 # Define DLL export macros
@@ -21,4 +21,3 @@ add_subdirectory(compiler)
 add_subdirectory(runtime)
 
 add_subdirectory(tools/lm)
-

@@ -251,6 +251,11 @@ void LMXOpcodeEmitter::emit_mov_rc(std::vector<lmx::runtime::Op> &ops, uint8_t r
     write_imm(op.operands + 1, std::bit_cast<int64_t>(idx));
     ops.push_back(op);
 }
+void LMXOpcodeEmitter::emit_dec(std::vector<lmx::runtime::Op> &ops, uint8_t r) {
+    runtime::Op op(runtime::Opcode::DEC);
+    op.operands[0] = r;
+    ops.push_back(op);
+}
 
 #undef getter_opt_code
 } // namespace lmx

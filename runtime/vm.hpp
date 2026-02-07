@@ -32,9 +32,9 @@ struct LMVM_API LMXState {
     LMXState& operator=(const LMXState&) = delete;
 
     // 3. 允许移动构造函数和移动赋值运算符
-    LMXState(LMXState&&) = default;
-    LMXState& operator=(LMXState&&) = default;
-
+    LMXState(LMXState&&) = delete;
+    LMXState& operator=(LMXState&&) = delete;
+    LMXState(LMXState&);
     // 4. 析构函数
     ~LMXState() = default;
 };

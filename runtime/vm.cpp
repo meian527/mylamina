@@ -20,12 +20,12 @@ VirtualCore::VirtualCore() : const_pool_top(nullptr), ste() {
     ste.cur.back()->locals.resize(64);
 }
 
-VirtualCore::VirtualCore(LMXState ste) : const_pool_top(nullptr), ste(std::move(ste)) {}
+/*VirtualCore::VirtualCore(LMXState ste) : const_pool_top(nullptr), ste(std::move(ste)) {}
 
 VirtualCore::VirtualCore(LMXState ste, void* const_pool_top) : 
     const_pool_top(const_pool_top), 
     ste(std::move(ste)) {
-}
+}*/
 
 Value *VirtualCore::get_value_from_pool(const size_t offest) const {
     return static_cast<Value*>(const_pool_top) + offest;
@@ -38,7 +38,7 @@ int VirtualCore::run() {
     switch (op) {
         using enum Opcode;
     case MOV_RI: {
-        ste.regs[operands[0]].i64 = *reinterpret_cast<const int64_t*>(operands + 1);
+        ste.regs[operands[0]] = *reinterpret_cast<const int64_t*>(operands + 1);
         ste.pc++;
         goto RUN_CONTINUE;
     }
@@ -48,12 +48,12 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case MOV_RR: {
-        ste.regs[operands[0]].i64 = ste.regs[operands[1]].i64;
+        ste.regs[operands[0]] = ste.regs[operands[1]];
         ste.pc++;
         goto RUN_CONTINUE;
     }
     case MOV_RC: {
-        ste.regs[operands[0]].str = (char*)get_constant() + *(uint64_t*)(operands + 1);
+        ste.regs[operands[0]] = (char*)get_constant() + *(uint64_t*)(operands + 1);
         ste.pc++;
         goto RUN_CONTINUE;
     }
@@ -79,32 +79,32 @@ int VirtualCore::run() {
         goto RUN_CONTINUE;
     }
     case ADD: {
-        ste.regs[operands[0]].i64 = ste.regs[operands[1]].i64 + ste.regs[operands[2]].i64;
+        ste.regs[operands[0]] = ste.regs[operands[1]].i64 + ste.regs[operands[2]].i64;
         ste.pc++;
         goto RUN_CONTINUE;
     }
     case SUB: {
-        ste.regs[operands[0]].i64 = ste.regs[operands[1]].i64 - ste.regs[operands[2]].i64;  
+        ste.regs[operands[0]] = ste.regs[operands[1]].i64 - ste.regs[operands[2]].i64;
         ste.pc++;
         goto RUN_CONTINUE;
     }
     case MUL: {
-        ste.regs[operands[0]].i64 = ste.regs[operands[1]].i64 * ste.regs[operands[2]].i64;
+        ste.regs[operands[0]] = ste.regs[operands[1]].i64 * ste.regs[operands[2]].i64;
         ste.pc++;   
         goto RUN_CONTINUE;
     }
     case DIV: {
-        ste.regs[operands[0]].i64 = ste.regs[operands[1]].i64 / ste.regs[operands[2]].i64;
+        ste.regs[operands[0]] = ste.regs[operands[1]].i64 / ste.regs[operands[2]].i64;
         ste.pc++;   
         goto RUN_CONTINUE;
     }
     case MOD: {
-        ste.regs[operands[0]].i64 = ste.regs[operands[1]].i64 % ste.regs[operands[2]].i64;
+        ste.regs[operands[0]] = ste.regs[operands[1]].i64 % ste.regs[operands[2]].i64;
         ste.pc++;   
         goto RUN_CONTINUE;
     }
     case POW: {
-        ste.regs[operands[0]].f64 = std::pow(ste.regs[operands[1]].f64, ste.regs[operands[2]].f64);
+        ste.regs[operands[0]] = std::pow(ste.regs[operands[1]].f64, ste.regs[operands[2]].f64);
         ste.pc++;   
         goto RUN_CONTINUE;
     }
@@ -206,6 +206,11 @@ int VirtualCore::run() {
     }
     case VMC: {
         VMCall::vmcall_table[*(uint16_t*)operands](this);
+        ste.pc++;
+        goto RUN_CONTINUE;
+    }
+    case DEC: {
+        ste.regs[operands[0]].i64--;
         ste.pc++;
         goto RUN_CONTINUE;
     }

@@ -9,10 +9,10 @@
 namespace lmx::runtime {
     struct StackFrame {
         // size_t local_pc{};
-        std::vector<Value> locals;
+        std::vector<Value> locals{};
         // size_t ret_addr{};
 
-        StackFrame() { locals.reserve(64); }
+        StackFrame() { locals.resize(56); }
 
         void new_var(const uint16_t addr, Value& value) {
             if (locals.size() <= addr) locals.resize(addr + 1);

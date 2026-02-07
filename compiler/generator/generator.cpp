@@ -75,6 +75,7 @@ size_t Generator::gen(std::shared_ptr<ASTNode> &n) {
         case VMCall: return gen_vmc(n);
         case Module: return gen_module(n);
         case Use: return gen_use(n);
+        case Loop: return gen_loop(n);
         default: {
             error("unknown node type");
             return -1;
@@ -90,6 +91,40 @@ size_t Generator::gen_program(std::shared_ptr<ASTNode> &n) {
     }
     return last_ret;
 }
+size_t Generator::gen_loop(const std::shared_ptr<ASTNode> &shared) {
+    const auto node = std::static_pointer_cast<LoopNode>(std::move(shared));
+
+    std::vector<size_t> break_points;
+    std::vector<size_t> continue_points;
+    const auto loop_cond = gen(node->condition);
+    const size_t loop_start = tagging();
+
+    const auto break_cond = tagging();
+    LMXOpcodeEmitter::emit_if_false(ops, loop_cond, 0);
+    if (node->body->kind != BlockStmt) {
+        error("should not have a loop body");
+        return -1;
+    }
+    for (auto& s: std::static_pointer_cast<BlockStmtNode>(std::move(node->body))->children) {
+        switch (s->kind) {
+            case Continue: continue_points.push_back(tagging()); LMXOpcodeEmitter::emit_jmp(ops, 0); break;
+            case Break: break_points.push_back(tagging()); LMXOpcodeEmitter::emit_jmp(ops, 0); break;
+            default:gen(s); break;
+        }
+    }
+    const auto continue_point = tagging();
+    LMXOpcodeEmitter::emit_dec(ops, loop_cond);
+    LMXOpcodeEmitter::emit_jmp(ops, loop_start);
+    const auto break_point = tagging();
+
+    for (const auto& bp: break_points)
+        memcpy(ops[bp].operands, &break_point, sizeof(break_point));
+    for (const auto& bp: continue_points)
+        memcpy(ops[bp].operands, &continue_point, sizeof(continue_point));
+    memcpy(ops[break_cond].operands + 1, &break_point, sizeof(break_cond));
+    return -1;
+}
+
 size_t Generator::gen_module(std::shared_ptr<ASTNode> &shared) {
     const auto node = std::static_pointer_cast<ModuleNode>(std::move(shared));
     for (const auto& mn : modules)
@@ -159,7 +194,7 @@ size_t Generator::gen_module(std::shared_ptr<ASTNode> &shared) {
 size_t Generator::gen_use(std::shared_ptr<ASTNode> &shared) {
     const auto node = static_pointer_cast<UseNode>(std::move(shared));
     auto pn = compile(node->path->str);
-    gen_program(pn);
+    gen(pn);
     return -1;
 }
 

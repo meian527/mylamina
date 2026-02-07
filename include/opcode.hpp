@@ -32,6 +32,7 @@ enum class Opcode {
 
     AND, OR,
     VMC,  // vmcall
+    DEC,
 };
 
 struct Op {

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 4.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 file(GLOB_RECURSE RUNTIME_SRC *.cpp */*.cpp)
@@ -10,9 +10,19 @@ if(WIN32)
 endif()
 # 启用 FetchContent
 include(FetchContent)
+
+find_program(HG_EXECUTABLE hg)
+if (NOT HG_EXECUTABLE)
+    message(FATAL_ERROR
+            "'Mercurial' no installed
+            please go to 'https://www.mercurial-scm.org/' or 'pip install mercurial'(if you installed python)
+")
+else ()
+    message(STATUS "downloading dyncall...")
+endif ()
 FetchContent_Declare(
         dyncall
-        HG_REPOSITORY https://dyncall.org/pub/dyncall/dyncall/
+        HG_REPOSITORY https://dyncall.org/pub/dyncall/dyncall
         HG_TAG        default
         OVERRIDE_FIND_PACKAGE
         # 禁用更新检查

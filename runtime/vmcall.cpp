@@ -10,7 +10,7 @@
  */
 VMC_REGISTER(out) {
     fputs(
-        self->get_register(REG_COUNT_INDEX_MAX).str,
+        self->get_register(REG_COUNT_INDEX_MAX).to_string().c_str(),
         stdout);
 }
 /*(1)*/
@@ -45,7 +45,7 @@ VMC_REGISTER(dyn_load) {
  * arg5 : ret_type_ptr(250)
  */
 VMC_REGISTER(dyn_set) {
-    const auto args_type_p = (CBasicTypes*)self->get_register(REG_COUNT_INDEX_MAX - 2).ptr;
+    const auto args_type_p = static_cast<CBasicTypes *>(self->get_register(REG_COUNT_INDEX_MAX - 2).ptr);
     static_cast<DynLib*>(self->get_register(REG_COUNT_INDEX_MAX).ptr)->set_func(
         self->get_register(REG_COUNT_INDEX_MAX - 1).str,
         std::vector<CBasicTypes>(

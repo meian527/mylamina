@@ -51,7 +51,7 @@ struct DynFunc {
 };
 
 struct DynLib {
-    const std::string name;
+    std::string name;
     void* handle;
     std::unordered_map<const char*, DynFunc> funcs;
 

@@ -176,6 +176,8 @@ public:
     std::vector<runtime::Op> get_ops();
     std::vector<char> constant_pool;
 
+    size_t gen_loop(const std::shared_ptr<ASTNode> & shared);
+
     size_t gen(std::shared_ptr<ASTNode> &n);
 
     [[nodiscard]] size_t togging() const {return ops.size();}

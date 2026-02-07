@@ -241,6 +241,9 @@ Token Lexer::next() {
                     {"__VMC", TokenType::KW_VMC},
                     {"module", TokenType::KW_MODULE},
                     {"use", TokenType::KW_USE},
+                    {"loop", TokenType::KW_LOOP},
+                    {"break", TokenType::KW_BREAK},
+                    {"continue", TokenType::KW_CONTINUE},
                 };
                 if (const auto it = keywords.find(id); it != keywords.end()) {
                     return {it->second, id, line, col - id.size()};

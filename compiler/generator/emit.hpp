@@ -30,6 +30,8 @@ public:
     static void emit_mov_rm(std::vector<lmx::runtime::Op>& ops, uint8_t r1, uint8_t r2, int8_t offest);
     static void emit_mov_rc(std::vector<lmx::runtime::Op>& ops, uint8_t r1, uint64_t idx);
 
+    static void emit_dec(std::vector<lmx::runtime::Op> &ops, uint8_t r);
+
     static void emit_mov_mi(std::vector<lmx::runtime::Op>& ops, uint8_t r1, int8_t offest1, int64_t imm);
     static void emit_mov_mr(std::vector<lmx::runtime::Op>& ops, uint8_t r1, int8_t offest1, uint8_t r2);
     static void emit_mov_mm(std::vector<lmx::runtime::Op>& ops, uint8_t r1, int8_t offest1, uint8_t r2, int8_t offest2);

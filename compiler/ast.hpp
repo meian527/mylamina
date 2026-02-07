@@ -35,6 +35,9 @@ enum ASTKind {
     Module,
     Use,
     ExternFunc,
+    Loop,
+    Break,
+    Continue
 };
 
 struct LMC_API ASTNode {
@@ -282,6 +285,19 @@ struct UseNode final : public StmtNode {
     std::shared_ptr<StringNode> path;
 
     explicit UseNode(std::shared_ptr<StringNode> path) : StmtNode(Use), path(std::move(path)) {}
+};
+
+struct LoopNode final : public StmtNode {
+    std::shared_ptr<ASTNode> condition, body;
+
+    explicit LoopNode(std::shared_ptr<ExprNode> condition, std::shared_ptr<BlockStmtNode> body)
+        : StmtNode(Loop), condition(std::move(condition)), body(std::move(body)) {}
+};
+struct BreakNode final : public StmtNode {
+    BreakNode(): StmtNode(Break) {}
+};
+struct ContinueNode final : public StmtNode {
+    ContinueNode(): StmtNode(Continue) {}
 };
 
 } // namespace lmx

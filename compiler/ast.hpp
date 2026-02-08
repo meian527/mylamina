@@ -20,7 +20,7 @@ class Generator;
 }
 
 namespace lmx {
-static bool node_has_error = false;
+
 enum ASTKind {
     Program,
     Binary, Unary, NumLiteral, StringLiteral, BoolLiteral,

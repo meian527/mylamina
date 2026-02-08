@@ -123,9 +123,10 @@ Token Lexer::next() {
             return {TokenType::OPER_POW, "^", line, col};
         }
         case '#': {
-            while (src[pos] != '\n')
+            while (pos <= src.size() && src[pos] != '\n' )
                 advance();
             advance();
+            return {TokenType::COMMENT, {}, line, col};
         }
         case '"': {
             advance();

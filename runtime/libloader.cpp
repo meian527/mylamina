@@ -33,7 +33,9 @@ void DynFunc::call(VirtualCore* vm) const {
         case Double:    dcArgDouble(caller, vm->get_register(reg).f64); break;
         case Ptr:       dcArgPointer(caller, vm->get_register(reg).ptr); break;
         case Bool:      dcArgBool(caller, vm->get_register(reg).i8); break;
-        default:break;
+        default:
+          dcArgPointer(caller, vm->get_register(reg).ptr);
+          break;
         }
         reg--;
     }
@@ -48,7 +50,9 @@ void DynFunc::call(VirtualCore* vm) const {
     case Double:    vm->get_register(0).f64 = dcCallDouble(caller, func); break;
     case Ptr:       vm->get_register(0).ptr = dcCallPointer(caller, func); break;
     case Bool:      vm->get_register(0).b   = dcCallBool(caller, func); break;
-    default:break;
+    default:
+      dcArgPointer(caller, vm->get_register(reg).ptr);
+      break;
     }
     
     dcFree(caller);

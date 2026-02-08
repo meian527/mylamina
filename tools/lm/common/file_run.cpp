@@ -22,7 +22,7 @@ int file_run(const std::string& file_name) {
     std::shared_ptr<lmx::ASTNode> node = parser.parse_program();
     if (!node || parser.error()) return -1;
     gener.gen(node);
-    if (lmx::node_has_error)return -1;
+    if (lmx::Generator::node_has_error)return -1;
     gener.ops.emplace_back(lmx::runtime::Opcode::HALT);
     gener.print_ops();
     //return 0;

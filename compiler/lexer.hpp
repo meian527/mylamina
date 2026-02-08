@@ -30,6 +30,7 @@ enum class /*LMC_API*/ TokenType {
     KW_LOOP,
     KW_BREAK,
     KW_CONTINUE,
+    COMMENT,
 };
 
 struct LMC_API Token {

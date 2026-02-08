@@ -40,6 +40,7 @@ void Parser::parse_args(std::vector<std::shared_ptr<ASTNode>> &args) {
 void Parser::advance() {
     if (pos < tokens.size()) {
         pos++;
+        if (cur().type == TokenType::COMMENT) advance();
         if (cur().type == TokenType::UNKNOWN) error("unknown token: `" + cur().text + "`");
     }
 }
@@ -153,7 +154,9 @@ std::shared_ptr<ASTNode> Parser::parse() {
     static bool in_func = false;
     static bool in_loop = false;
     std::shared_ptr<ASTNode> node;
+    re_parse:
     switch (cur().type) {
+    case TokenType::COMMENT: advance(); goto re_parse;
     case TokenType::KW_LET: {
         advance();
         if (!match(TokenType::IDENTIFIER)) error("expected identifier");
@@ -187,7 +190,9 @@ std::shared_ptr<ASTNode> Parser::parse() {
     }
     case TokenType::KW_LOOP: {
         advance();
-        auto cond = parse_expr();
+        std::shared_ptr<ExprNode> cond = nullptr;
+        if (!match(TokenType::LBRACE))
+            cond = parse_expr();
         in_loop = true;
         auto block = parse_block();
         node = std::make_shared<LoopNode>(cond, block);

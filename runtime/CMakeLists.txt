@@ -4,7 +4,7 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 file(GLOB_RECURSE RUNTIME_SRC *.cpp */*.cpp)
 add_library(lmvm SHARED ${RUNTIME_SRC})
 
-# Define build macro for DLL export
+# Define cmake-build-debug macro for DLL export
 if(WIN32)
     target_compile_definitions(lmvm PRIVATE LMVM_BUILD)
 endif()

@@ -30,10 +30,10 @@ cd lamina
 
 ```bash
 # 使用CMake构建
-mkdir build
-cd build
+mkdir cmake-build-debug
+cd cmake-build-debug
 cmake ..
-cmake --build .
+cmake --cmake-build-debug .
 ```
 
 

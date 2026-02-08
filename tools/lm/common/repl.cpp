@@ -32,7 +32,7 @@ int run_repl() {
             auto node = parser.parse();
             if (!node || parser.error()) continue;
             const auto op = gener.gen(node);
-            if (lmx::node_has_error) continue;
+            if (lmx::Generator::node_has_error) continue;
             gener.ops.emplace_back(lmx::runtime::Opcode::HALT);
             //gener.print_ops();
             //continue;

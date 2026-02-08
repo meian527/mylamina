@@ -2,7 +2,7 @@ set(CMAKE_CXX_STANDARD 20)
 file(GLOB_RECURSE COMPILER_SRC "*.cpp" "*/[!test_]*.cpp")
 add_library(lmc SHARED ${COMPILER_SRC})
 
-# Define build macro for DLL export
+# Define cmake-build-debug macro for DLL export
 if(WIN32)
     target_compile_definitions(lmc PRIVATE LMC_BUILD)
 endif()

@@ -160,12 +160,17 @@ class LMC_API Generator {
         if (lmt == "bool") return runtime::CBasicTypes::Bool;
         if (lmt == "num") return runtime::CBasicTypes::LongLong;
         if (lmt == "text") return runtime::CBasicTypes::Ptr;
+        if (lmt == "null") return runtime::CBasicTypes::Void;
         return runtime::CBasicTypes::NO_ENUM_VALUE;
     }
     std::vector<std::string> modules;
     std::stringstream cur_module;
     std::vector<std::string> using_modules;
+
+    std::vector<size_t> break_points;
+    std::vector<size_t> continue_points;
 public:
+    static bool node_has_error;
     Allocator regs;
     Generator() { cur.push_back(std::make_unique<CompilingFrame>("global")); }
     ~Generator() = default;
@@ -177,6 +182,10 @@ public:
     std::vector<char> constant_pool;
 
     size_t gen_loop(const std::shared_ptr<ASTNode> & shared);
+
+    size_t gen_continue(std::shared_ptr<ASTNode> &n);
+
+    size_t gen_break(std::shared_ptr<ASTNode> &n);
 
     size_t gen(std::shared_ptr<ASTNode> &n);
 

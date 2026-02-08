@@ -47,7 +47,7 @@ std::filesystem::path get_executable_path() {
 }
 
 std::filesystem::path get_executable_directory() {
-    std::filesystem::path exe_path = get_executable_path();
+    const std::filesystem::path exe_path = get_executable_path();
     if (!exe_path.empty()) {
         return exe_path.parent_path();  // 获取目录部分
     }

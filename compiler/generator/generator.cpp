@@ -96,8 +96,6 @@ size_t Generator::gen_program(std::shared_ptr<ASTNode> &n) {
 size_t Generator::gen_loop(const std::shared_ptr<ASTNode> &shared) {
     const auto node = std::static_pointer_cast<LoopNode>(std::move(shared));
 
-
-
     size_t loop_cond = -1;
     if (node->condition) loop_cond = gen(node->condition);
     const size_t loop_start = tagging();
@@ -111,7 +109,11 @@ size_t Generator::gen_loop(const std::shared_ptr<ASTNode> &shared) {
         error("should not have a loop body");
         return -1;
     }
+
+    static size_t LOOP_COUNT = 0;
+    new_frame("@loop@_" + std::to_string(LOOP_COUNT++));
     gen(node->body);
+    free_frame();
     const auto continue_point = tagging();
     if (loop_cond != -1)LMXOpcodeEmitter::emit_dec(ops, loop_cond);
     LMXOpcodeEmitter::emit_jmp(ops, loop_start);
@@ -471,6 +473,8 @@ size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
     static size_t counter = 0;
     new_frame("@if@_" + std::to_string(counter++));
     gen(node->thenBlock);
+    const size_t then_end = tagging();
+    LMXOpcodeEmitter::emit_jmp(ops, 0);
     free_frame();
     tmp = tagging();
     memcpy(ops[els].operands, &tmp, sizeof(tmp));
@@ -479,6 +483,8 @@ size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
         gen(node->elseBlock);
         free_frame();
     }
+    tmp = tagging();
+    memcpy(ops[then_end].operands, &tmp, sizeof(tmp));
     return -1;
 }
 

@@ -50,10 +50,10 @@ jobs:
           CXX: ${{ matrix.cpp_compiler }}
 
       - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+        run: cmake --cmake-build-debug ${{github.workspace}}/cmake-build-debug --config ${{ matrix.build_type }}
 
       - name: Test
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{github.workspace}}/cmake-build-debug
         run: |
             ctest -C ${{ matrix.build_type }} --output-on-failure
         if: ${{ success() }}
@@ -62,19 +62,19 @@ jobs:
         if: ${{ success() && matrix.build_type == 'Release' }}
         run: |
           cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
-      - name: Upload build artifacts
+      - name: Upload cmake-build-debug artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
+          name: lm-cmake-build-debug-${{ matrix.os }}-run${{ github.run_id }}
           path: 
-            ${{ github.workspace }}/build/bin
-            ${{ github.workspace }}/build/lib/
+            ${{ github.workspace }}/cmake-build-debug/bin
+            ${{ github.workspace }}/cmake-build-debug/lib/
           retention-days: 7
         if: ${{ success() && matrix.os != 'windows-latest' }}
       - name: Upload artifacts for Windows
         uses: actions/upload-artifact@v4
         with:
-          name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
+          name: lm-cmake-build-debug-${{ matrix.os }}-run${{ github.run_id }}
           path: |
             ${{ github.workspace }}/build/bin/
           retention-days: 7

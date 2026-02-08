@@ -175,15 +175,15 @@ std::shared_ptr<ASTNode> Parser::parse() {
         break;
     }
     case TokenType::KW_RETURN: {
+        if (!in_func) error("expected 'return'");
+
         auto line = cur().line;
         advance();
         if (cur().line > line) {
             node = std::make_shared<ReturnStmtNode>(nullptr);
         } else {
             auto e = parse_expr();
-            if (!in_func) {
-                error("expected 'return'");
-            }
+
             node = std::make_shared<ReturnStmtNode>(e);
         }
         break;

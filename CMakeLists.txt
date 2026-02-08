@@ -9,6 +9,14 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /utf-8")
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
+    else ()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast")
+    endif()
+endif ()
+
 # Define DLL export macros
 if(BUILD_SHARED_LIBS OR WIN32)
     add_definitions(-DLMX_DLL)

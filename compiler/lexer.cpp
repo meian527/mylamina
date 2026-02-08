@@ -216,6 +216,7 @@ Token Lexer::next() {
         }
         default: {
             if (isdigit(src[pos])) {
+                auto cur_line = line, cur_col = col;
                 std::string num;
                 while (isdigit(src[pos]) || src[pos] == '_') {
                     if (src[pos] == '_') {
@@ -225,10 +226,11 @@ Token Lexer::next() {
                     num += src[pos];
                     advance();
                 }
-                return {TokenType::NUM_LITERAL, num, line, col - num.size()};
+                return {TokenType::NUM_LITERAL, num, cur_line, cur_col};
             }
             if (isalpha(src[pos]) || src[pos] == '_') {
                 std::string id;
+                auto cur_line = line, cur_col = col;
                 while (isalnum(src[pos])|| src[pos] == '_') {
                     id += src[pos];
                     advance();
@@ -247,9 +249,9 @@ Token Lexer::next() {
                     {"continue", TokenType::KW_CONTINUE},
                 };
                 if (const auto it = keywords.find(id); it != keywords.end()) {
-                    return {it->second, id, line, col - id.size()};
+                    return {it->second, id, cur_line, cur_col};
                 }
-                return {TokenType::IDENTIFIER, id, line, col - id.size()};
+                return {TokenType::IDENTIFIER, id, cur_line, cur_col};
             }
         }
     }

@@ -490,6 +490,7 @@ size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
 
     tmp = tagging();
     memcpy(ops[then_end].operands, &tmp, sizeof(tmp));
+    regs.free(cond);
     return -1;
 }
 
@@ -549,7 +550,7 @@ void Generator::print_ops() {
             break;
         }
         case FCALL: {
-            printf("FCALL: 0x%llx, 0x%u\n", *reinterpret_cast<uint64_t *>(op.operands), op.operands[8]);
+            printf("FCALL: 0x%llx, %u\n", *reinterpret_cast<uint64_t *>(op.operands), op.operands[8]);
             break;
         }
         case FRET: {
@@ -613,7 +614,7 @@ void Generator::print_ops() {
             break;
         }
         case FUNC_END: {
-            printf("FUNC_END\n");
+            printf("FUNC_END\n\n");
             break;
         }
         case AND: {

@@ -72,6 +72,8 @@ class LMC_API Generator {
 
     size_t gen_block(std::shared_ptr<ASTNode>& n);
 
+    size_t basic_gen_block(std::shared_ptr<ASTNode> &n);
+
     size_t gen_module(std::shared_ptr<ASTNode> &shared);
 
     size_t gen_use(std::shared_ptr<ASTNode> &shared);
@@ -87,7 +89,7 @@ class LMC_API Generator {
     }
 
     struct CompilingFrame {
-        std::string name{"global"};
+        std::string name;
         std::unordered_map<std::string, std::pair<bool, uint16_t>> locals; // name <mutable, here>
 
         uint16_t local_count{static_cast<uint16_t>(-1)};
@@ -134,7 +136,7 @@ class LMC_API Generator {
     std::unordered_map<std::string, std::pair<uint8_t, size_t>> funcs;
     void new_func(const std::string & name, uint8_t size) {
         if (!funcs.contains(name)) {
-            funcs[name] = std::make_pair(size, togging());
+            funcs[name] = std::make_pair(size, tagging());
         } else error("redefined function: `" + name + "`");
     }
     void new_func(const std::string & name, uint8_t size, size_t addr) {
@@ -172,13 +174,13 @@ class LMC_API Generator {
 public:
     static bool node_has_error;
     Allocator regs;
-    Generator() { cur.push_back(std::make_unique<CompilingFrame>("global")); }
+    Generator();
     ~Generator() = default;
 
     std::vector<runtime::Op> ops;
     void write(runtime::Op& op);
 
-    std::vector<runtime::Op> get_ops();
+    std::vector<runtime::Op> &get_ops();
     std::vector<char> constant_pool;
 
     size_t gen_loop(const std::shared_ptr<ASTNode> & shared);

@@ -10,7 +10,7 @@
 
 static std::string read_file(const std::string& file_name) {
     std::ifstream file(file_name);
-    return std::string(std::istreambuf_iterator(file),std::istreambuf_iterator<char>());
+    return {std::istreambuf_iterator(file),std::istreambuf_iterator<char>()};
 }
 
 int file_run(const std::string& file_name) {

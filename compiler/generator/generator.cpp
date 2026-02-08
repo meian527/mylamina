@@ -45,12 +45,15 @@ bool Allocator::is_free(size_t i) {
     return bitset.test(i);
 }
 
+Generator::Generator() {
+    cur.push_back(std::make_unique<CompilingFrame>("global"));
+}
 void Generator::write(runtime::Op& op) {
     ops.push_back(op);
 }
 
 
-std::vector<lmx::runtime::Op> Generator::get_ops() {
+std::vector<runtime::Op> &Generator::get_ops() {
     if (ops.back().op != runtime::Opcode::HALT) {
         ops.emplace_back(lmx::runtime::Opcode::HALT);
     }
@@ -109,11 +112,7 @@ size_t Generator::gen_loop(const std::shared_ptr<ASTNode> &shared) {
         error("should not have a loop body");
         return -1;
     }
-
-    static size_t LOOP_COUNT = 0;
-    new_frame("@loop@_" + std::to_string(LOOP_COUNT++));
     gen(node->body);
-    free_frame();
     const auto continue_point = tagging();
     if (loop_cond != -1)LMXOpcodeEmitter::emit_dec(ops, loop_cond);
     LMXOpcodeEmitter::emit_jmp(ops, loop_start);
@@ -309,7 +308,7 @@ size_t Generator::gen_var_ref(std::shared_ptr<ASTNode>& n) {
     } else {
         regs.free(expr_ret_reg);
         expr_ret_reg = -1;
-        std::cerr << "The var `" + node->name + "` is not found!" << std::endl;
+        error("The var `" + node->name + "` is not found!");
     }
     expr_release = false;
     return expr_ret_reg;
@@ -340,7 +339,8 @@ size_t Generator::gen_function(std::shared_ptr<ASTNode> &n) {
         cur.back()->new_var(node->args[i], true, i);
     }
     if (node->body->kind != BlockStmt) error("expected block statement.");
-    gen(node->body);
+    basic_gen_block(node->body);
+
     LMXOpcodeEmitter::emit_fret(ops);
     LMXOpcodeEmitter::emit_func_end(ops);
     free_frame();
@@ -452,9 +452,19 @@ size_t Generator::gen_bool(std::shared_ptr<ASTNode> &n) {
 }
 
 size_t Generator::gen_block(std::shared_ptr<ASTNode> &n) {
+
+    std::unordered_map save(cur.back()->locals);
+    const size_t expr_ret_reg = basic_gen_block(n);
+    cur.back()->locals = std::move(save);
+
+    return expr_ret_reg;
+}
+size_t Generator::basic_gen_block(std::shared_ptr<ASTNode> &n) {
     const auto node = std::static_pointer_cast<BlockStmtNode>(std::move(n));
     size_t expr_ret_reg = 0;
+
     for (auto& c: node->children) expr_ret_reg = gen(c);
+
     return expr_ret_reg;
 }
 
@@ -470,19 +480,14 @@ size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
 
     auto tmp = tagging();
     memcpy(ops[the].operands + 1, &tmp, sizeof(tmp));
-    static size_t counter = 0;
-    new_frame("@if@_" + std::to_string(counter++));
     gen(node->thenBlock);
     const size_t then_end = tagging();
     LMXOpcodeEmitter::emit_jmp(ops, 0);
-    free_frame();
     tmp = tagging();
     memcpy(ops[els].operands, &tmp, sizeof(tmp));
-    if (node->elseBlock) {
-        new_frame("@else@_" + std::to_string(counter++));
+    if (node->elseBlock)
         gen(node->elseBlock);
-        free_frame();
-    }
+
     tmp = tagging();
     memcpy(ops[then_end].operands, &tmp, sizeof(tmp));
     return -1;

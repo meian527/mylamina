@@ -12,8 +12,8 @@ env:
 jobs:
   build:
     timeout-minutes: 360
-    #concurrency:
-     # group: ${{ github.workflow }}-${{ github.ref }}
+      #concurrency:
+    # group: ${{ github.workflow }}-${{ github.ref }}
     
     strategy:
       fail-fast: false
@@ -40,7 +40,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: recursive  
+          submodules: recursive
 
       - name: Configure CMake
         run: |
@@ -50,31 +50,31 @@ jobs:
           CXX: ${{ matrix.cpp_compiler }}
 
       - name: Build
-        run: cmake --cmake-build-debug ${{github.workspace}}/cmake-build-debug --config ${{ matrix.build_type }}
+        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
 
       - name: Test
-        working-directory: ${{github.workspace}}/cmake-build-debug
+        working-directory: ${{github.workspace}}/build
         run: |
-            ctest -C ${{ matrix.build_type }} --output-on-failure
+          ctest -C ${{ matrix.build_type }} --output-on-failure
         if: ${{ success() }}
 
       - name: Install
         if: ${{ success() && matrix.build_type == 'Release' }}
         run: |
           cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
-      - name: Upload cmake-build-debug artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lm-cmake-build-debug-${{ matrix.os }}-run${{ github.run_id }}
-          path: 
-            ${{ github.workspace }}/cmake-build-debug/bin
-            ${{ github.workspace }}/cmake-build-debug/lib/
+          name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
+          path:
+            ${{ github.workspace }}/build/bin
+          # ${{ github.workspace }}/build/lib/
           retention-days: 7
         if: ${{ success() && matrix.os != 'windows-latest' }}
       - name: Upload artifacts for Windows
         uses: actions/upload-artifact@v4
         with:
-          name: lm-cmake-build-debug-${{ matrix.os }}-run${{ github.run_id }}
+          name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
           path: |
             ${{ github.workspace }}/build/bin/
           retention-days: 7

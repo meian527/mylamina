@@ -50,32 +50,30 @@ jobs:
           CXX: ${{ matrix.cpp_compiler }}
 
       - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }} --parallel
 
       - name: Test
         working-directory: ${{github.workspace}}/build
         run: |
           ctest -C ${{ matrix.build_type }} --output-on-failure
         if: ${{ success() }}
-
-      - name: Install
-        if: ${{ success() && matrix.build_type == 'Release' }}
+      - name: collect lib and bin no windows
         run: |
-          cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
+          mkdir ${{github.workspace}}/lamina
+          cp -rf ${{github.workspace}}/build/bin lamina
+          cp -rf ${{github.workspace}}/build/lib lamina
+        if: ${{ success() && matrix.build_type == 'Release' && matrix.os != 'windows-latest' }}
+      - name: collect lib and bin windows
+        run: |
+          mkdir ${{ github.workspace }}\lamina
+          cp -Recurse ${{ github.workspace }}\build\bin\Release lamina
+        if: ${{ success() && matrix.build_type == 'Release' && matrix.os == 'windows-latest' }}
       - name: Upload build artifacts
+        
         uses: actions/upload-artifact@v4
         with:
           name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
           path:
-            ${{ github.workspace }}/build/bin
-          # ${{ github.workspace }}/build/lib/
+            ${{github.workspace}}/lamina
           retention-days: 7
-        if: ${{ success() && matrix.os != 'windows-latest' }}
-      - name: Upload artifacts for Windows
-        uses: actions/upload-artifact@v4
-        with:
-          name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
-          path: |
-            ${{ github.workspace }}/build/bin/
-          retention-days: 7
-        if: ${{ success() && matrix.os == 'windows-latest' }}
+        if: ${{ success() && matrix.build_type == 'Release' }}

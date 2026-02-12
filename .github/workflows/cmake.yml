@@ -63,12 +63,15 @@ jobs:
         run: |
           cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
       - name: Upload build artifacts
+        
         uses: actions/upload-artifact@v4
         with:
           name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
           path:
             build/bin
             build/lib
+          run: |
+            pwd
           retention-days: 7
         if: ${{ success() && matrix.os != 'windows-latest' }}
       - name: Upload artifacts for Windows

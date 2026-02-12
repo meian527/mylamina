@@ -4,6 +4,8 @@
 
 #include "value.hpp"
 
+#include <cstring>
+
 namespace lmx::runtime {
 
 Value::Value() : null(nullptr), type(ValueType::Ptr) {
@@ -55,11 +57,35 @@ Value& Value::operator=(const Value& rhs) {
         case ValueType::Str: this->str = rhs.str; break;
         case ValueType::Bool: this->b = rhs.b; break;
         case ValueType::Ptr: this->ptr = rhs.ptr; break;
-
+        case ValueType::Null: this->null = nullptr; break;
     }
     return *this;
 }
 
+
+bool Value::operator==(const Value& rhs) const {
+    switch (this->type) {
+        case ValueType::Int: return this->i64 == rhs.i64;
+        case ValueType::Float: return this->f64 == rhs.f64;
+        case ValueType::Str: return strcmp(this->str, rhs.str) == 0;
+        case ValueType::Bool: return this->b == rhs.b;
+        case ValueType::Ptr: return this->ptr == rhs.ptr;
+        case ValueType::Null: return this->null == rhs.null;
+        default: return false;
+    }
+}
+
+bool Value::operator!=(const Value& rhs) const {
+    switch (this->type) {
+    case ValueType::Int: return this->i64 != rhs.i64;
+    case ValueType::Float: return this->f64 != rhs.f64;
+    case ValueType::Str: return strcmp(this->str, rhs.str) != 0;
+    case ValueType::Bool: return this->b != rhs.b;
+    case ValueType::Ptr: return this->ptr != rhs.ptr;
+    case ValueType::Null: return this->null != rhs.null;
+    default: return true;
+    }
+}
 
 template<class T>
 T &Value::get() {
@@ -77,6 +103,36 @@ std::string Value::to_string() const {
         case ValueType::Str:    return this->str;
         case ValueType::Float:  return std::to_string(this->f64);
         default: return {};
+    }
+}
+
+size_t ValueHasher::operator()(const Value& v) const noexcept {
+    size_t seed = std::hash<int>{}(static_cast<int>(v.type));
+
+    switch (v.type) {
+    case ValueType::Bool:
+        return seed ^ std::hash<bool>{}(v.b);
+
+    case ValueType::Int:
+        return seed ^ std::hash<uint64_t>{}(v.u64);
+
+    case ValueType::Float:
+        return seed ^ std::hash<double>{}(v.f64);
+
+    case ValueType::Null:
+        return seed ^ 0xdeadbeef;
+
+    case ValueType::Ptr:
+        return seed ^ std::hash<void*>{}(v.ptr);
+
+    case ValueType::Str:
+        if (v.str) {
+            return seed ^ std::hash<std::string_view>{}(v.str);
+        }
+        return seed ^ 0xcafebabe;
+
+    default:
+        return seed;
     }
 }
 } // namespace lmx::runtime

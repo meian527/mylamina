@@ -9,11 +9,11 @@
 
 namespace lmx::runtime {
 namespace ValueType { enum ValueType {
-    Bool, Int, Float, Str, Ptr, // ptr用于 外来类型
+    Bool, Int, Float, Str, Ptr, Null,// ptr用于 外来类型
     NO_ENUM_VALUE,
 };
 inline const char* value_type_name[NO_ENUM_VALUE] = {
-    "Bool", "int", "Float", "Str", "Ptr"
+    "Bool", "int", "Float", "Str", "Ptr", "Null"
 };
 inline const char* type_name(const ValueType t) { return value_type_name[t]; }
 };
@@ -55,6 +55,13 @@ struct LMVM_API Value {
     [[nodiscard]] const char* type_name() const;
 
     [[nodiscard]] std::string to_string() const;
+
+    bool operator==(const Value &rhs) const;
+    bool operator!=(const Value &rhs) const;
+};
+
+struct ValueHasher {
+    size_t operator()(const Value& v) const noexcept;
 };
 
 }

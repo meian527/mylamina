@@ -50,7 +50,7 @@ jobs:
           CXX: ${{ matrix.cpp_compiler }}
 
       - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }} --parallel
 
       - name: Test
         working-directory: ${{github.workspace}}/build

@@ -57,22 +57,17 @@ jobs:
         run: |
           ctest -C ${{ matrix.build_type }} --output-on-failure
         if: ${{ success() }}
-
-      - name: Install
-        if: ${{ success() && matrix.build_type == 'Release' }}
-        run: |
-          cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install
       - name: collect lib and bin no windows
-        if: ${{ success() && matrix.build_type == 'Release' && matrix.os != 'windows-latest' }}
         run: |
           mkdir ${{github.workspace}}/lamina
           cp -rf ${{github.workspace}}/build/bin lamina
           cp -rf ${{github.workspace}}/build/lib lamina
+        if: ${{ success() && matrix.build_type == 'Release' && matrix.os != 'windows-latest' }}
       - name: collect lib and bin windows
-        if: ${{ success() && matrix.build_type == 'Release' && matrix.os == 'windows-latest' }}
         run: |
           mkdir ${{ github.workspace }}\lamina
           cp -Recurse ${{ github.workspace }}\build\bin\Release lamina
+        if: ${{ success() && matrix.build_type == 'Release' && matrix.os == 'windows-latest' }}
       - name: Upload build artifacts
         
         uses: actions/upload-artifact@v4

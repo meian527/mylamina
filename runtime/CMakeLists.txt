@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 file(GLOB_RECURSE RUNTIME_SRC *.cpp */*.cpp)
 add_library(lmvm SHARED ${RUNTIME_SRC})
 

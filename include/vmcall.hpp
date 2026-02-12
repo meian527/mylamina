@@ -21,7 +21,6 @@ public:
     static inline VmCallType vmcall_table[] = {
         lm_out, lm_in, lm_exit, lm_dyn_load, lm_dyn_set, lm_dyn_call
     };
-
     static inline uint16_t vmcall_count = sizeof(vmcall_table) / sizeof(VmCallType);
 };
 }

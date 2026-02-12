@@ -55,7 +55,7 @@ void Generator::write(runtime::Op& op) {
 
 std::vector<runtime::Op> &Generator::get_ops() {
     if (ops.back().op != runtime::Opcode::HALT) {
-        ops.emplace_back(lmx::runtime::Opcode::HALT);
+        ops.emplace_back(runtime::Opcode::HALT);
     }
     return ops;
 }
@@ -494,7 +494,25 @@ size_t Generator::gen_if(std::shared_ptr<ASTNode> &n) {
     return -1;
 }
 
-void Generator::print_ops() {
+void Generator::write_binary_file(const std::string& path) {
+    const auto pos = path.find_last_of('.');
+    std::string p;
+    if (pos != std::string::npos) {
+         p = path.substr(0, pos);
+    }else p = path;
+    p += ".lmc";
+    std::ofstream file(p, std::ios::binary);
+    file.write((char*)&lmx_magic, sizeof(lmx_magic));
+    file.write((char*)&lmx_version, sizeof(lmx_version));
+    for (const auto& op: get_ops()) {
+        file << static_cast<uint8_t>(op.op);
+        file.write((char*)op.operands, runtime::opcode_len(op.op));
+    }
+
+    file.write(constant_pool.data(), constant_pool.size());
+    file.close();
+}
+void Generator::print_ops(std::vector<runtime::Op>& ops) {
     size_t i = 0;
     for (auto &op: ops) {
         printf("[0x%llx]\t", i++);
@@ -634,10 +652,13 @@ void Generator::print_ops() {
         }
         }
     }
-
-    printf("[0x%llx]\tHALT\n", i);
     std::cout << std::flush;
 }
+
+void Generator::print_ops() {
+    print_ops(ops);
+}
+
 
 
 

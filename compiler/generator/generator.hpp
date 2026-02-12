@@ -83,6 +83,8 @@ class LMC_API Generator {
     void free_frame() { cur.pop_back(); }
     size_t gen_if(std::shared_ptr<ASTNode>& n);
 
+
+
     static void error(const std::string& msg) {
         node_has_error = true;
         std::cerr << "Error: " << msg << std::endl;
@@ -194,6 +196,8 @@ public:
     [[nodiscard]] size_t togging() const {return ops.size();}
 
     void print_ops();
+    static void print_ops(std::vector<runtime::Op>& ops);
+    void write_binary_file(const std::string &path);
 
     void print_vars() {
         for (auto& v: cur)

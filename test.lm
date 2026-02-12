@@ -1,10 +1,11 @@
-// 测试变量定义和引用
-let x = 10;
-let y = 20;
-let z = x + y;
-print(z); // 应该输出 30
-
-// 测试变量重新赋值
-x = 5;
-z = x + y;
-print(z); // 应该输出 25
+func print(s){
+    __VMC 0(s)
+    __VMC 0("\n")
+}
+x = 10
+let y = 20
+z = x + y
+print(z)
+x = 5
+z = x + y
+print(z)

@@ -1,6 +1,9 @@
 //
 // Created by geguj on 2025/12/28.
 //
+//
+// question of AD-iOS fix "printf" format error, in 521 line
+//
 
 #include "generator.hpp"
 #include <bitset>
@@ -515,7 +518,7 @@ void Generator::write_binary_file(const std::string& path) {
 void Generator::print_ops(std::vector<runtime::Op>& ops) {
     size_t i = 0;
     for (auto &op: ops) {
-        printf("[0x%llx]\t", i++);
+        printf("[0x%zx]\t", i++); // fix [0x%llx] the warning caused by
         switch (op.op) {
             using enum runtime::Opcode;
         case MOV_RI: {

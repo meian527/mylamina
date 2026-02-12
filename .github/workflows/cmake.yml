@@ -67,8 +67,8 @@ jobs:
         with:
           name: lm-build-${{ matrix.os }}-run${{ github.run_id }}
           path:
-            ${{ github.workspace }}/build/bin
-            ${{ github.workspace }}/lib
+            build/bin
+            build/lib
           retention-days: 7
         if: ${{ success() && matrix.os != 'windows-latest' }}
       - name: Upload artifacts for Windows

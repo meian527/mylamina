@@ -1,0 +1,6 @@
+.git-pr
+Terminal
+ios-obj-log/*
+build/*
+obj/*
+rm-win-r.sh

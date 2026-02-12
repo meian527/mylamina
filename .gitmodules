@@ -1,0 +1,3 @@
+[submodule "SDKs"]
+	path = SDKs
+	url = https://github.com/AD-iOS/SDKs

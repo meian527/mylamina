@@ -1,6 +1,9 @@
 //
 // Created by geguj on 2025/12/27.
 //
+//
+// AD-iOS add "case ValueType::NO_ENUM_VALUE: break;" to line 63
+//
 
 #include "value.hpp"
 
@@ -58,6 +61,7 @@ Value& Value::operator=(const Value& rhs) {
         case ValueType::Bool: this->b = rhs.b; break;
         case ValueType::Ptr: this->ptr = rhs.ptr; break;
         case ValueType::Null: this->null = nullptr; break;
+        case ValueType::NO_ENUM_VALUE: break; // add this line to avoid warning.
     }
     return *this;
 }

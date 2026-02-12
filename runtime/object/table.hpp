@@ -14,8 +14,8 @@ public:
     TableObj() : BaseObj(LMXObjType::Table) {}
 
     TableObj(const TableObj& obj) noexcept = default;
-    constexpr TableObj& operator=(const TableObj& obj) noexcept = default;
-    constexpr TableObj& operator=(TableObj&& obj) noexcept = default;
+    TableObj& operator=(const TableObj& obj) noexcept = default;
+    TableObj& operator=(TableObj&& obj) noexcept = default;
     ~TableObj() = default;
 
     size_t size() const;

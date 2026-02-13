@@ -106,6 +106,8 @@ std::string Value::to_string() const {
         case ValueType::Bool:   return this->b ? "true" : "false";
         case ValueType::Str:    return this->str;
         case ValueType::Float:  return std::to_string(this->f64);
+        case ValueType::Null:   return "null";
+        case ValueType::Ptr:    if (!this->ptr) return "null";
         default: return {};
     }
 }

@@ -1,0 +1,5 @@
+module test : "mylib" {
+	func add(a: num, b: num): num = "add"
+}
+
+__VMC 2(test.add(1, 2))

@@ -1,0 +1,9 @@
+func print(s) {
+    __VMC 0(s)
+    __VMC 0("\n")
+}
+
+func exit(c) {
+    __VMC 2(c)
+}
+

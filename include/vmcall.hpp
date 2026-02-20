@@ -19,7 +19,10 @@ public:
     using VmCallType = void (*)(VirtualCore* self);
 
     static inline VmCallType vmcall_table[] = {
-        lm_out, lm_in, lm_exit, lm_dyn_load, lm_dyn_set, lm_dyn_call
+        lm_out, lm_in, lm_exit,
+#ifndef TARGET_WASM
+        lm_dyn_load, lm_dyn_set, lm_dyn_call
+#endif
     };
     static inline uint16_t vmcall_count = sizeof(vmcall_table) / sizeof(VmCallType);
 };

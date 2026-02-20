@@ -45,7 +45,9 @@ class LMVM_API VirtualCore {
 
     [[nodiscard]] Value *get_value_from_pool(size_t offest) const;
 public:
+#ifndef TARGET_WASM
     std::vector<std::unique_ptr<DynLib>> libs;
+#endif
     VirtualCore();
     VirtualCore(const VirtualCore&) = delete;
     VirtualCore& operator=(const VirtualCore&) = delete;

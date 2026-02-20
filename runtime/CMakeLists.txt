@@ -11,19 +11,18 @@ if(WIN32)
 endif()
 # 启用 FetchContent
 include(FetchContent)
-
-
-message(STATUS "downloading dyncall...")
-FetchContent_Declare(
+target_include_directories(lmvm PUBLIC ${CMAKE_SOURCE_DIR}/include)
+if (WASM_TARGET STREQUAL "OFF")
+    message(STATUS "downloading dyncall...")
+    FetchContent_Declare(
         dyncall
         GIT_REPOSITORY https://github.com/ugexe/dyncall.git
         GIT_TAG        "r1.4"
         OVERRIDE_FIND_PACKAGE
         # 禁用更新检查
         UPDATE_DISCONNECTED ON
-)
-target_include_directories(lmvm PRIVATE ${CMAKE_BINARY_DIR}/_deps/dyncall-src)
-FetchContent_MakeAvailable(dyncall)
-
-target_include_directories(lmvm PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(lmvm dyncall_s dyncallback_s dynload_s)
+    )
+    target_include_directories(lmvm PRIVATE ${CMAKE_BINARY_DIR}/_deps/dyncall-src)
+    FetchContent_MakeAvailable(dyncall)
+    target_link_libraries(lmvm dyncall_s dyncallback_s dynload_s)
+endif ()

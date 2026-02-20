@@ -1,5 +1,5 @@
 #pragma once
-
+#ifndef TARGET_WASM
 #include "lmx_export.hpp"
 #include <cstdint>
 #include <string>
@@ -75,3 +75,4 @@ struct DynLib {
 
 
 }
+#endif

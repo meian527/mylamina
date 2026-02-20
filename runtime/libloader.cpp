@@ -1,3 +1,15 @@
+#ifndef TARGET_WASM
+#include <cstdint>
+#include <filesystem>
+#include <iostream>
+#include <ostream>
+#include <string>
+#include <vector>
+
+#include "vm.hpp"
+#include "dyncall/dyncall.h"
+#include "value/value.hpp"
+
 #include "libloader.hpp"
 #include "../compiler/generator/generator.hpp"
 #include <iostream>
@@ -127,3 +139,5 @@ void DynLib::call(const char* n, VirtualCore* vm) const {
 }
 
 } // namespace lmx::runtime
+
+#endif

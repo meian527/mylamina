@@ -17,6 +17,18 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
     endif()
 endif ()
 
+
+
+# 如果你不编译到wasm可以设为OFF
+set(TARGET_WASM ON)
+if (TARGET_WASM)
+add_definitions(-DTARGET_WASM)
+endif ()
+
+
+
+
+
 # Define DLL export macros
 if(BUILD_SHARED_LIBS OR WIN32)
     add_definitions(-DLMX_DLL)
@@ -29,4 +41,3 @@ add_subdirectory(compiler)
 add_subdirectory(runtime)
 
 add_subdirectory(tools/lm)
-

@@ -149,7 +149,7 @@ class LMC_API Generator {
     bool find_func(const std::string & name) const {
         return funcs.contains(name);
     }
-
+#ifndef TARGET_WASM
     /*
      * extern funcs
      * name : args_type
@@ -170,6 +170,7 @@ class LMC_API Generator {
     std::vector<std::string> modules;
     std::stringstream cur_module;
     std::vector<std::string> using_modules;
+#endif
 
     std::vector<size_t> break_points;
     std::vector<size_t> continue_points;

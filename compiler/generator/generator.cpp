@@ -145,6 +145,7 @@ size_t Generator::gen_break(std::shared_ptr<ASTNode> &n) {
 }
 
 size_t Generator::gen_module(std::shared_ptr<ASTNode> &shared) {
+#ifndef TARGET_WASM
     const auto node = std::static_pointer_cast<ModuleNode>(std::move(shared));
     for (const auto& mn : modules)
         if (mn == node->name) return -1;    //已解析过同名模块，不再解析
@@ -208,6 +209,10 @@ size_t Generator::gen_module(std::shared_ptr<ASTNode> &shared) {
     }
 
     cur_module >> tmp;
+#else
+    error("wasm32 target not module support");
+#endif
+
     return -1;
 }
 size_t Generator::gen_use(std::shared_ptr<ASTNode> &shared) {
@@ -368,7 +373,9 @@ size_t Generator::basic_gen_func_call(std::shared_ptr<ASTNode> &n, const size_t 
         }
         basic_gen_pass_args(node->args, args_idx, args_count);
         LMXOpcodeEmitter::emit_fcall(ops, addr, tar_ac);
-    } else if (extern_funcs.contains(node->name)) {
+    }
+#ifndef TARGET_WASM
+    else if (extern_funcs.contains(node->name)) {
         const auto& [tar_ac, ts] = extern_funcs[node->name];
         const auto args_count = node->args.size();
         if (args_count + args_idx != ts.size()) {
@@ -387,7 +394,9 @@ size_t Generator::basic_gen_func_call(std::shared_ptr<ASTNode> &n, const size_t 
         LMXOpcodeEmitter::emit_local_get(ops, 0, mod.first, mod.second.second);
         LMXOpcodeEmitter::emit_mov_rc(ops, 1, tar_ac);
         LMXOpcodeEmitter::emit_vmc(ops, 5);
-    }else error("The function `" + node->name + "` is not defined.");
+    }
+#endif
+    else error("The function `" + node->name + "` is not defined.");
 
     return 0;
 }

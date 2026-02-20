@@ -24,7 +24,7 @@ VMC_REGISTER(in) {
 VMC_REGISTER(exit) {
     exit(self->get_register(REG_COUNT_INDEX_MAX).i32);
 }
-
+#ifndef TARGET_WASM
 /*
  * VMC_dyn_load(3)
  * arg1 : lib_name(254)
@@ -68,4 +68,5 @@ VMC_REGISTER(dyn_call) {
         self
         );
 }
+#endif
 

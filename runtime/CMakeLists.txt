@@ -3,7 +3,12 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 file(GLOB_RECURSE RUNTIME_SRC *.cpp */*.cpp)
-add_library(lmvm SHARED ${RUNTIME_SRC})
+if (NOT TARGET_WASM)
+    add_library(lmvm SHARED ${RUNTIME_SRC})
+else ()
+    add_library(lmvm STATIC ${RUNTIME_SRC})
+endif ()
+
 
 # Define cmake-build-debug macro for DLL export
 if(WIN32)
@@ -12,7 +17,7 @@ endif()
 # 启用 FetchContent
 include(FetchContent)
 target_include_directories(lmvm PUBLIC ${CMAKE_SOURCE_DIR}/include)
-if (WASM_TARGET STREQUAL "OFF")
+if (NOT WASM_TARGET)
     message(STATUS "downloading dyncall...")
     FetchContent_Declare(
         dyncall

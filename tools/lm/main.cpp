@@ -65,3 +65,4 @@ int main(int argc, char* argv[]) {
         lmx::module_path.push_back(exe_dir);
     return file_run(argv[1]);
 }
+
